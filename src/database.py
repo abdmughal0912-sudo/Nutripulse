@@ -149,6 +149,15 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS email_otp_rate_limits (
+            user_id TEXT PRIMARY KEY,
+            last_sent_at TEXT NOT NULL,
+            window_started_at TEXT NOT NULL,
+            send_count INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS dietitian_customer_links (
             dietitian_id TEXT NOT NULL,
             customer_id TEXT NOT NULL,
@@ -598,6 +607,61 @@ def get_user_by_username(username: str, db_path: Path = DATABASE_PATH) -> dict[s
 def record_login(user_id: str, db_path: Path = DATABASE_PATH) -> None:
     with connection(db_path) as conn:
         conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (utc_now(), str(user_id)))
+
+
+def set_verified_user_email(user_id: str, email: str, db_path: Path = DATABASE_PATH) -> bool:
+    """Store an email only after the caller has completed email verification."""
+    clean_email = str(email or "").strip().lower()
+    if not clean_email:
+        raise ValueError("A verified email address is required.")
+    with connection(db_path) as conn:
+        cursor = conn.execute(
+            "UPDATE users SET email = ? WHERE id = ?",
+            (clean_email, str(user_id)),
+        )
+    return cursor.rowcount > 0
+
+
+def reserve_email_otp_delivery(
+    user_id: str, db_path: Path = DATABASE_PATH, *, now: datetime | None = None,
+) -> tuple[bool, int]:
+    """Reserve one OTP delivery with a 60-second cooldown and ten-per-hour cap."""
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    with connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT last_sent_at, window_started_at, send_count FROM email_otp_rate_limits WHERE user_id = ?",
+            (str(user_id),),
+        ).fetchone()
+        if row:
+            last_sent = datetime.fromisoformat(str(row["last_sent_at"]))
+            window_started = datetime.fromisoformat(str(row["window_started_at"]))
+            seconds_since_last = (current - last_sent).total_seconds()
+            if seconds_since_last < 60:
+                return False, max(1, int(60 - seconds_since_last + 0.999))
+            window_age = (current - window_started).total_seconds()
+            if window_age < 3600 and int(row["send_count"]) >= 10:
+                return False, max(1, int(3600 - window_age + 0.999))
+            if window_age >= 3600:
+                window_started = current
+                send_count = 1
+            else:
+                send_count = int(row["send_count"]) + 1
+            conn.execute(
+                """UPDATE email_otp_rate_limits
+                   SET last_sent_at = ?, window_started_at = ?, send_count = ?
+                   WHERE user_id = ?""",
+                (current.isoformat(), window_started.isoformat(), send_count, str(user_id)),
+            )
+        else:
+            conn.execute(
+                """INSERT INTO email_otp_rate_limits
+                   (user_id, last_sent_at, window_started_at, send_count)
+                   VALUES (?, ?, ?, 1)""",
+                (str(user_id), current.isoformat(), current.isoformat()),
+            )
+    return True, 0
 
 
 def list_users(role: str | None = None, db_path: Path = DATABASE_PATH) -> list[dict[str, Any]]:

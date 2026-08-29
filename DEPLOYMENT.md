@@ -1,4 +1,4 @@
-# NutriPulse v4.3 deployment
+# NutriPulse v4.4 deployment
 
 ## Local Windows deployment
 
@@ -11,7 +11,23 @@ NUTRIPULSE_ADMIN_SETUP_CODE=<long private first-administrator setup code>
 NUTRIPULSE_API_KEY=<long independent API secret>
 NUTRIPULSE_CORS_ORIGINS=https://your-frontend.example
 NUTRIPULSE_UTC_OFFSET_HOURS=5
+NUTRIPULSE_SMTP_HOST=smtp.gmail.com
+NUTRIPULSE_SMTP_PORT=587
+NUTRIPULSE_SMTP_USERNAME=your-sender@gmail.com
+NUTRIPULSE_SMTP_PASSWORD=<Google App Password, not the normal Gmail password>
+NUTRIPULSE_SMTP_SENDER_EMAIL=your-sender@gmail.com
+NUTRIPULSE_SMTP_SENDER_NAME=NutriPulse AI
 ```
+
+Email verification is mandatory after a valid password. For Gmail SMTP, enable
+Google 2-Step Verification on a dedicated sender account and generate an App
+Password. Put it only in the hosting provider's secret manager. New accounts
+must register a valid email. An older account without an email is offered a
+one-time email enrollment, and its address is saved only after the code succeeds.
+
+Codes contain six digits, expire after 10 minutes, allow five attempts and can
+be resent after 60 seconds. The app stores only a one-way digest of the active
+code in the user's server-side Streamlit session.
 
 Optional assistant adapter:
 

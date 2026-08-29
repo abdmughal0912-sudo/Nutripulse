@@ -46,6 +46,8 @@ from src.database import (
     list_users,
     load_profile,
     link_dietitian_customer,
+    record_login,
+    reserve_email_otp_delivery,
     request_review,
     save_lab_report,
     save_plan,
@@ -54,11 +56,16 @@ from src.database import (
     set_dietitian_approval,
     set_meal_status_with_progress,
     set_prescription_status,
+    set_verified_user_email,
     submit_questionnaire,
     sync_alerts,
     upsert_profile,
 )
 from src.diet_engine import generate_plan, grocery_list
+from src.email_otp import (
+    EmailDeliveryError, SmtpSettings, create_login_challenge, is_valid_email_address,
+    mask_email, resend_wait_seconds, send_login_code, verify_login_code,
+)
 from src.food_analysis import analyze_food_image
 from src.image_sources import RemoteImageError, fetch_public_image
 from src.lab_analyzer import assess_safety, classify_manual_results, extract_text_from_upload, parse_lab_text
@@ -87,17 +94,38 @@ apply_theme()
 initialize_database()
 
 
-def admin_setup_code() -> str:
-    configured = os.getenv("NUTRIPULSE_ADMIN_SETUP_CODE", "").strip()
+def secret_value(name: str, default: str = "") -> str:
+    configured = os.getenv(name, "").strip()
     if configured:
         return configured
     try:
-        secret = str(st.secrets.get("NUTRIPULSE_ADMIN_SETUP_CODE", "")).strip()
+        secret = str(st.secrets.get(name, "")).strip()
         if secret:
             return secret
     except Exception:
         pass
-    return ""
+    return default
+
+
+def admin_setup_code() -> str:
+    return secret_value("NUTRIPULSE_ADMIN_SETUP_CODE")
+
+
+def smtp_settings() -> SmtpSettings:
+    username = secret_value("NUTRIPULSE_SMTP_USERNAME")
+    port_text = secret_value("NUTRIPULSE_SMTP_PORT", "587")
+    try:
+        port = int(port_text)
+    except ValueError as exc:
+        raise ValueError("NUTRIPULSE_SMTP_PORT must be a number.") from exc
+    return SmtpSettings(
+        host=secret_value("NUTRIPULSE_SMTP_HOST", "smtp.gmail.com"),
+        port=port,
+        username=username,
+        password=secret_value("NUTRIPULSE_SMTP_PASSWORD"),
+        sender_email=secret_value("NUTRIPULSE_SMTP_SENDER_EMAIL", username),
+        sender_name=secret_value("NUTRIPULSE_SMTP_SENDER_NAME", "NutriPulse AI"),
+    )
 
 
 def default_profile(profile_id: str, name: str) -> dict:
@@ -108,6 +136,117 @@ def default_profile(profile_id: str, name: str) -> dict:
         "cuisine": "Pakistani + international", "conditions": [],
         "allergies": [], "medications": "",
     }
+
+
+PENDING_LOGIN_KEYS = (
+    "pending_auth_user", "pending_login_email", "login_otp", "otp_delivery_error",
+)
+
+
+def clear_pending_login() -> None:
+    for key in PENDING_LOGIN_KEYS:
+        st.session_state.pop(key, None)
+
+
+def deliver_login_code(user: dict, email: str) -> None:
+    allowed, wait_seconds = reserve_email_otp_delivery(str(user["id"]))
+    if not allowed:
+        if wait_seconds >= 60:
+            raise ValueError("Too many verification emails were requested. Try again later.")
+        raise ValueError(f"Wait {wait_seconds} seconds before requesting another code.")
+    challenge, code = create_login_challenge(str(user["id"]), email)
+    send_login_code(
+        smtp_settings(), email, str(user.get("display_name", "NutriPulse user")), code,
+    )
+    st.session_state.pending_login_email = email.strip().lower()
+    st.session_state.login_otp = challenge
+    st.session_state.pop("otp_delivery_error", None)
+
+
+def render_email_verification(user: dict) -> None:
+    st.subheader("Verify your email")
+    st.caption(
+        "Your password was accepted. Enter the six-digit email code before NutriPulse opens your portal."
+    )
+    stored_email = str(user.get("email", "")).strip().lower()
+    challenge = st.session_state.get("login_otp")
+    pending_email = str(st.session_state.get("pending_login_email", "")).strip().lower()
+    delivery_error = str(st.session_state.get("otp_delivery_error", "")).strip()
+    if delivery_error:
+        st.error(delivery_error)
+
+    if not challenge:
+        if is_valid_email_address(stored_email):
+            st.info(f"Send a verification code to {mask_email(stored_email)}.")
+            if st.button("Send verification code", type="primary", width="stretch"):
+                try:
+                    deliver_login_code(user, stored_email)
+                    st.rerun()
+                except (EmailDeliveryError, ValueError) as exc:
+                    st.session_state.otp_delivery_error = str(exc)
+                    st.rerun()
+        else:
+            st.info(
+                "This existing account does not yet have a verified email. Add one now; "
+                "it will be saved only after the code is verified."
+            )
+            with st.form("verified_email_enrollment"):
+                enrollment_email = st.text_input("Email address", placeholder="name@gmail.com")
+                send_enrollment = st.form_submit_button(
+                    "Send verification code", type="primary", width="stretch",
+                )
+            if send_enrollment:
+                try:
+                    if not is_valid_email_address(enrollment_email):
+                        raise ValueError("Enter a valid email address.")
+                    deliver_login_code(user, enrollment_email)
+                    st.rerun()
+                except (EmailDeliveryError, ValueError) as exc:
+                    st.session_state.otp_delivery_error = str(exc)
+                    st.rerun()
+    else:
+        destination = pending_email or str(challenge.get("email", ""))
+        st.success(f"Verification code sent to {mask_email(destination)}.")
+        with st.form("login_email_verification"):
+            code = st.text_input(
+                "Six-digit verification code", max_chars=6, placeholder="000000",
+            )
+            verify = st.form_submit_button("Verify and sign in", type="primary", width="stretch")
+        if verify:
+            verified, message = verify_login_code(challenge, str(user["id"]), code)
+            if verified:
+                if not is_valid_email_address(stored_email):
+                    if not set_verified_user_email(str(user["id"]), destination):
+                        st.error("The verified email could not be saved. Contact the Administrator.")
+                        st.stop()
+                    user["email"] = destination
+                record_login(str(user["id"]))
+                clear_pending_login()
+                st.session_state.current_user = user
+                st.success("Email verified. Opening your secure portal…")
+                st.rerun()
+            else:
+                st.error(message)
+
+        wait_seconds = resend_wait_seconds(challenge)
+        resend_col, cancel_col = st.columns(2)
+        resend_label = "Resend code" if wait_seconds == 0 else f"Resend in {wait_seconds}s"
+        if resend_col.button(
+            resend_label, disabled=wait_seconds > 0, width="stretch", key="resend_login_otp",
+        ):
+            try:
+                deliver_login_code(user, destination)
+                st.rerun()
+            except (EmailDeliveryError, ValueError) as exc:
+                st.session_state.otp_delivery_error = str(exc)
+                st.rerun()
+        if cancel_col.button("Cancel sign-in", width="stretch", key="cancel_login_otp"):
+            clear_pending_login()
+            st.rerun()
+    if st.button("Use another account", width="stretch", key="cancel_pending_account"):
+        clear_pending_login()
+        st.rerun()
+    st.stop()
 
 
 def require_login() -> dict:
@@ -125,6 +264,9 @@ def require_login() -> dict:
         "NutriPulse AI is an AI nutrition analyzer and Dietitian platform for food-image "
         "analysis, personalized diet plans, laboratory report review, and nutrition progress tracking."
     )
+    pending_user = st.session_state.get("pending_auth_user")
+    if pending_user:
+        render_email_verification(pending_user)
     tab_names = ["Sign in", "Customer sign-up", "Dietitian application"]
     if not has_admin():
         tab_names.append("First admin setup")
@@ -136,11 +278,19 @@ def require_login() -> dict:
             password = st.text_input("Password", type="password", key="login_password")
             submitted = st.form_submit_button("Enter NutriPulse", type="primary", width="stretch")
         if submitted:
-            user, message = authenticate_with_status(username, password)
+            user, message = authenticate_with_status(username, password, record_success=False)
             if user:
-                st.session_state.current_user = user
+                clear_pending_login()
+                st.session_state.pending_auth_user = user
+                registered_email = str(user.get("email", "")).strip().lower()
+                if is_valid_email_address(registered_email):
+                    try:
+                        deliver_login_code(user, registered_email)
+                    except (EmailDeliveryError, ValueError) as exc:
+                        st.session_state.otp_delivery_error = str(exc)
                 st.rerun()
-            st.error(message)
+            else:
+                st.error(message)
     with customer_register:
         st.caption("Customer accounts are activated immediately and open only the personal nutrition workspace.")
         with st.form("customer_registration"):
@@ -149,7 +299,7 @@ def require_login() -> dict:
             b.text_input("Account type", "Customer", disabled=True)
             c, d = st.columns(2)
             new_username = c.text_input("Choose username")
-            email = d.text_input("Email (optional)")
+            email = d.text_input("Email (required for verification)")
             e, f = st.columns(2)
             new_password = e.text_input("Choose password", type="password")
             confirm_password = f.text_input("Confirm password", type="password")
@@ -158,6 +308,8 @@ def require_login() -> dict:
             try:
                 if new_password != confirm_password:
                     raise ValueError("Passwords do not match.")
+                if not is_valid_email_address(email):
+                    raise ValueError("A valid email is required for sign-in verification.")
                 user = register_account(new_username, new_password, "Customer", display_name, email)
                 profile_payload = default_profile(str(user["id"]), str(user["display_name"]))
                 upsert_profile(profile_payload)
@@ -183,6 +335,8 @@ def require_login() -> dict:
             try:
                 if dietitian_password != dietitian_confirm:
                     raise ValueError("Passwords do not match.")
+                if not is_valid_email_address(dietitian_email):
+                    raise ValueError("A valid professional email is required for verification.")
                 if len(dietitian_credential.strip()) < 3:
                     raise ValueError("A valid professional registration/license ID is required.")
                 register_account(
@@ -225,6 +379,8 @@ def require_login() -> dict:
                         raise ValueError("Invalid Administrator setup code.")
                     if admin_password != admin_confirm:
                         raise ValueError("Passwords do not match.")
+                    if not is_valid_email_address(admin_email):
+                        raise ValueError("A valid Administrator email is required for verification.")
                     register_admin_account(admin_username, admin_password, admin_name, admin_email)
                     st.success("Administrator created. Sign in to approve Dietitians and assign customers.")
                     st.rerun()

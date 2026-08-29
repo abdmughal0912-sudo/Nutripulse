@@ -66,7 +66,9 @@ def register_admin_account(username: str, password: str, display_name: str,
     )
 
 
-def authenticate_with_status(username: str, password: str) -> tuple[dict[str, Any] | None, str]:
+def authenticate_with_status(
+    username: str, password: str, *, record_success: bool = True,
+) -> tuple[dict[str, Any] | None, str]:
     user = get_user_by_username(username)
     if not user or not verify_password(password, str(user["password_hash"])):
         return None, "Incorrect username or password."
@@ -77,7 +79,8 @@ def authenticate_with_status(username: str, password: str) -> tuple[dict[str, An
         return None, "This Dietitian application was not approved. Contact the administrator."
     if not int(user.get("active", 0)):
         return None, "This account is inactive. Contact the administrator."
-    record_login(str(user["id"]))
+    if record_success:
+        record_login(str(user["id"]))
     return {key: value for key, value in user.items() if key != "password_hash"}, "Signed in."
 
 

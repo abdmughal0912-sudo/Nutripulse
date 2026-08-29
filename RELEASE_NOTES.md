@@ -1,13 +1,16 @@
-# NutriPulse AI v4.3 — Release Notes
+# NutriPulse AI v4.4 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.3 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.4 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 ## Release highlights
 
+- Mandatory six-digit email verification after every successful password check.
+- Ten-minute code expiry, five-attempt limit and a 60-second resend cooldown.
+- One-time verified-email enrollment for existing accounts without an email.
 - Separate Customer, Dietitian and Administrator workspaces.
 - Administrator approval for Dietitian applications and controlled caseload assignment.
 - Persistent day-to-day meal progression and automatic Week 1 → Week 2 advancement.

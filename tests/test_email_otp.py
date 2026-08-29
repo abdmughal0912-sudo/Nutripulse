@@ -1,0 +1,116 @@
+from __future__ import annotations
+
+import tempfile
+import unittest
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from unittest.mock import patch
+
+from src.auth import authenticate_with_status, hash_password
+from src.database import (
+    create_user, get_user, initialize_database, reserve_email_otp_delivery,
+    set_verified_user_email,
+)
+from src.email_otp import (
+    OTP_MAX_ATTEMPTS,
+    SmtpSettings,
+    create_login_challenge,
+    is_valid_email_address,
+    mask_email,
+    resend_wait_seconds,
+    send_login_code,
+    verify_login_code,
+)
+
+
+class EmailOtpTests(unittest.TestCase):
+    def test_email_validation_and_masking(self) -> None:
+        self.assertTrue(is_valid_email_address("person@example.com"))
+        self.assertFalse(is_valid_email_address("not-an-email"))
+        self.assertEqual(mask_email("person@example.com"), "pe****@example.com")
+
+    def test_challenge_accepts_correct_code_and_expires(self) -> None:
+        challenge, code = create_login_challenge("user-1", "person@example.com", now=100.0)
+        verified, _ = verify_login_code(challenge, "user-1", code, now=101.0)
+        self.assertTrue(verified)
+        expired, message = verify_login_code(challenge, "user-1", code, now=701.0)
+        self.assertFalse(expired)
+        self.assertIn("expired", message.lower())
+
+    def test_challenge_limits_incorrect_attempts(self) -> None:
+        challenge, code = create_login_challenge("user-1", "person@example.com", now=100.0)
+        wrong = "000000" if code != "000000" else "999999"
+        for _ in range(OTP_MAX_ATTEMPTS):
+            verified, _ = verify_login_code(challenge, "user-1", wrong, now=101.0)
+            self.assertFalse(verified)
+        verified, message = verify_login_code(challenge, "user-1", code, now=102.0)
+        self.assertFalse(verified)
+        self.assertIn("too many", message.lower())
+
+    def test_resend_cooldown(self) -> None:
+        challenge, _ = create_login_challenge("user-1", "person@example.com", now=100.0)
+        self.assertEqual(resend_wait_seconds(challenge, now=100.0), 60)
+        self.assertEqual(resend_wait_seconds(challenge, now=160.0), 0)
+
+    @patch("src.email_otp.smtplib.SMTP")
+    def test_smtp_uses_tls_and_authentication(self, smtp_class) -> None:
+        smtp = smtp_class.return_value.__enter__.return_value
+        settings = SmtpSettings(
+            host="smtp.gmail.com", port=587, username="sender@gmail.com",
+            password="app-password", sender_email="sender@gmail.com",
+        )
+        send_login_code(settings, "person@example.com", "Person", "123456")
+        smtp.starttls.assert_called_once()
+        smtp.login.assert_called_once_with("sender@gmail.com", "app-password")
+        smtp.send_message.assert_called_once()
+
+    def test_verified_email_is_persisted(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            db_path = Path(folder) / "otp.db"
+            initialize_database(db_path)
+            user = create_user(
+                "otp_user", hash_password("SecurePass123"), "Customer", "OTP User",
+                db_path=db_path,
+            )
+            self.assertTrue(set_verified_user_email(user["id"], "Verified@Example.com", db_path))
+            saved = get_user(user["id"], db_path)
+            self.assertEqual(saved["email"], "verified@example.com")
+
+    def test_database_delivery_rate_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            db_path = Path(folder) / "rate-limit.db"
+            initialize_database(db_path)
+            user = create_user(
+                "rate_user", hash_password("SecurePass123"), "Customer", "Rate User",
+                db_path=db_path,
+            )
+            start = datetime(2026, 8, 29, 10, 0, tzinfo=timezone.utc)
+            allowed, wait = reserve_email_otp_delivery(user["id"], db_path, now=start)
+            self.assertTrue(allowed)
+            self.assertEqual(wait, 0)
+            allowed, wait = reserve_email_otp_delivery(
+                user["id"], db_path, now=start + timedelta(seconds=1),
+            )
+            self.assertFalse(allowed)
+            self.assertEqual(wait, 59)
+
+    def test_password_validation_can_defer_login_recording(self) -> None:
+        encoded = hash_password("SecurePass123")
+        fake_user = {
+            "id": "user-1", "username": "person", "password_hash": encoded,
+            "role": "Customer", "display_name": "Person", "email": "person@example.com",
+            "active": 1, "approval_status": "Approved", "is_admin": 0,
+        }
+        with patch("src.auth.get_user_by_username", return_value=fake_user), patch(
+            "src.auth.record_login",
+        ) as record_login:
+            user, message = authenticate_with_status(
+                "person", "SecurePass123", record_success=False,
+            )
+        self.assertIsNotNone(user)
+        self.assertEqual(message, "Signed in.")
+        record_login.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()
