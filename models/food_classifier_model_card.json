@@ -1,0 +1,22 @@
+{
+  "name": "MobileNetV2 Food-101",
+  "format": "ONNX",
+  "classes": 101,
+  "input": "float32 [1, 3, 224, 224]",
+  "reported_top1_accuracy": 0.763,
+  "training_dataset": "Food-101",
+  "source": "https://huggingface.co/AlexKoff88/mobilenet_v2_food101",
+  "training_code": "https://github.com/AlexKoff88/mobilenetv2_food101",
+  "license": "Apache-2.0",
+  "sha256": "87b73d4d635e9f5cf611021cbf6db1b1d7d4b1965b19fe383abaf0aee3617f09",
+  "checkpoint_sha256": "42cd5d9988f0830588b3be5107197c9b622c9b73426377975c07e8b24e346680",
+  "export_note": "Re-exported from the published epoch-27 checkpoint with model.eval() and ONNX opset 17.",
+  "preprocessing": "Resize shorter side to 256, center crop 224, ImageNet normalization",
+  "limitations": [
+    "Recognizes only the 101 Food-101 dish classes.",
+    "A photo may contain several foods but the model performs single-label classification.",
+    "Confidence is not a medical or nutrition certainty score.",
+    "The model cannot determine ingredients, allergens, portion size, cooking oil, or exact nutrients.",
+    "Every result must be confirmed against the nutrition database before logging."
+  ]
+}

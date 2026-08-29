@@ -1,0 +1,28 @@
+NUTRIPULSE v4.3 DOWNLOAD AND START HELP
+=======================================
+
+COMPLETE DOWNLOAD
+1. Download NutriPulse_v4.3_Complete.zip.
+2. Right-click it and choose Extract All.
+3. Double-click START_NUTRIPULSE.bat in the extracted outer folder.
+
+SMALL-DOWNLOAD FALLBACK
+1. Download NutriPulse_v4.3_Core.zip plus Vision1, Vision2, and Vision3.
+2. Extract all four ZIP files into the SAME destination.
+3. Approve folder merging if Windows asks.
+4. Open NutriPulse_App and run RESTORE_VISION_MODEL.bat once.
+5. Return to the outer folder and run START_NUTRIPULSE.bat.
+
+Do not run NutriPulse while it is still inside a ZIP file.
+
+IF STARTUP FAILS
+Open NUTRIPULSE_STARTUP_LOG.txt inside NutriPulse_App and send its contents.
+
+VS CODE
+Double-click OPEN_IN_VSCODE.bat, or open the exact NutriPulse_App folder and run:
+  .\START_ALL.bat
+
+WINDOWS APPLICATION CONTROL
+v4.3 does not import SciPy or scikit-learn at startup. If Windows blocks the
+optional ONNX Runtime DLL, Food Vision uses OpenCV DNN and the app still starts.
+Do not reuse an older .venv. Let START_ALL.bat create NutriPulse_App\.venv.

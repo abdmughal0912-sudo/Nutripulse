@@ -1,0 +1,47 @@
+services:
+  nutripulse:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      PORT: "8501"
+      NUTRIPULSE_ADMIN_SETUP_CODE: "${NUTRIPULSE_ADMIN_SETUP_CODE:?Set NUTRIPULSE_ADMIN_SETUP_CODE}"
+      NUTRIPULSE_API_URL: "http://localhost:8000"
+      NUTRIPULSE_DATABASE_PATH: /app/runtime/nutripulse.db
+      NUTRIPULSE_UTC_OFFSET_HOURS: "${NUTRIPULSE_UTC_OFFSET_HOURS:-5}"
+      NUTRIPULSE_ASSISTANT_API_URL: "${NUTRIPULSE_ASSISTANT_API_URL:-}"
+      NUTRIPULSE_ASSISTANT_API_KEY: "${NUTRIPULSE_ASSISTANT_API_KEY:-}"
+    volumes:
+      - nutripulse_data:/app/runtime
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  nutripulse-api:
+    build: .
+    command: ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port 8000"]
+    ports:
+      - "8000:8000"
+    environment:
+      NUTRIPULSE_API_KEY: "${NUTRIPULSE_API_KEY:-}"
+      NUTRIPULSE_CORS_ORIGINS: "${NUTRIPULSE_CORS_ORIGINS:-http://localhost:8501,http://127.0.0.1:8501}"
+      NUTRIPULSE_DATABASE_PATH: /app/runtime/nutripulse.db
+      NUTRIPULSE_UTC_OFFSET_HOURS: "${NUTRIPULSE_UTC_OFFSET_HOURS:-5}"
+      NUTRIPULSE_ASSISTANT_API_URL: "${NUTRIPULSE_ASSISTANT_API_URL:-}"
+      NUTRIPULSE_ASSISTANT_API_KEY: "${NUTRIPULSE_ASSISTANT_API_KEY:-}"
+    volumes:
+      - nutripulse_data:/app/runtime
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  nutripulse_data:

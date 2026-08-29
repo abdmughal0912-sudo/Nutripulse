@@ -1,6 +1,6 @@
 # NutriPulse AI v4.3
 
-NutriPulse is a local-first nutrition intelligence platform built with Streamlit, FastAPI, SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.3 adds persistent automatic day/week schedule progression and complete daily/weekly analytics while preserving the separated Customer, Dietitian and Administrator workspaces. The auditable registry still covers every one of the 76,920 supplied source rows.
+NutriPulse is a local-first nutrition intelligence platform built with Streamlit, FastAPI, SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.3 adds persistent automatic day/week schedule progression and complete daily/weekly analytics while preserving the separated Customer, Dietitian and Administrator workspaces. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
 
 ## Fastest Windows start
 
@@ -10,13 +10,7 @@ NutriPulse is a local-first nutrition intelligence platform built with Streamlit
 4. Open <http://127.0.0.1:8501>.
 5. Create the first Administrator, then approve Dietitian applications and assign Customers.
 
-Local first-run Administrator setup code:
-
-```text
-NUTRIPULSE-ADMIN
-```
-
-Set a private `NUTRIPULSE_ADMIN_SETUP_CODE` before any shared or internet deployment. If startup fails, open `NUTRIPULSE_STARTUP_LOG.txt` inside `NutriPulse_App` for the exact diagnostic.
+Before starting, create a long private value for `NUTRIPULSE_ADMIN_SETUP_CODE` in your environment or `.streamlit/secrets.toml`. Administrator registration remains disabled when the value is missing. Never commit the real value. If startup fails, open `NUTRIPULSE_STARTUP_LOG.txt` inside `NutriPulse_App` for the exact diagnostic.
 
 ## VS Code
 
@@ -63,7 +57,7 @@ The launcher selects Python 3.12/3.11, creates `.venv`, installs requirements, s
 - Approve or reject pending Dietitian applications.
 - Assign Customers to approved Dietitians.
 - Full-customer override for clinical review.
-- Account directory, caseload audit, complete 76,920-row dataset registry and model governance.
+- Account directory, caseload audit, aggregate 76,920-row dataset lineage and model governance.
 
 ## Nine-dataset integration
 
@@ -75,7 +69,7 @@ The build pipeline uses each supplied file according to its meaning:
 | Two allergen/restriction tables | Normalized into `data/food_safety_registry.csv`; never treated as nutrition labels |
 | One person-level intake table | Summarized in `data/intake_benchmarks.json`; never treated as a food record |
 
-The current build audits exactly 76,920 supplied rows: 70,920 food/product-related source rows and 6,000 person-level benchmarks. Of these, 62,591 are nutrition-classifier candidates; validation and deduplication produce 47,152 nutrition-ready unique records. The 8,329 dedicated safety-source rows remain in the allergen/restriction layer. No row is silently discarded: `data/source_record_registry.csv` retains source file, row number, record type, purpose and integration status for every supplied row. Full lineage, hashes, counts and model metrics are recorded in `data/dataset_manifest.json`.
+The current build audits exactly 76,920 supplied rows: 70,920 food/product-related source rows and 6,000 person-level benchmarks. Of these, 62,591 are nutrition-classifier candidates; validation and deduplication produce 47,152 nutrition-ready unique records. The 8,329 dedicated safety-source rows remain in the allergen/restriction layer. Aggregate lineage, hashes, counts and model metrics are recorded in `data/dataset_manifest.json`. The row-level `data/source_record_registry.csv` is generated locally but intentionally excluded from the public repository because it includes person-level benchmark lineage.
 
 The offline build script is:
 

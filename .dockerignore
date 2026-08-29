@@ -1,0 +1,13 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.py[cod]
+*.db
+*.sqlite*
+*.ses
+*.zip
+.env
+.streamlit/secrets.toml
+exports
+tests

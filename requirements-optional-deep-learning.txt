@@ -1,0 +1,2 @@
+# Install only when you have a compatible Python version, sufficient RAM and validated model weights.
+torch>=2.4

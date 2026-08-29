@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="NutriPulse AI mark">
+  <defs>
+    <linearGradient id="g" x1="16" y1="10" x2="112" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BFF56D"/>
+      <stop offset=".55" stop-color="#55E4D2"/>
+      <stop offset="1" stop-color="#D8B35B"/>
+    </linearGradient>
+    <filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="34" fill="#07100D"/>
+  <rect x="8" y="8" width="112" height="112" rx="29" fill="none" stroke="#D8B35B" stroke-opacity=".28"/>
+  <path d="M31 82V41h12l23 25V41h13v41H67L44 57v25H31Z" fill="url(#g)" filter="url(#s)"/>
+  <path d="M86 35c10 2 16 8 18 18-10-2-16-8-18-18Z" fill="#BFF56D"/>
+  <circle cx="97" cy="78" r="7" fill="#55E4D2"/>
+</svg>

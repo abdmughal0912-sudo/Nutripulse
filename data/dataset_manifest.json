@@ -1,0 +1,159 @@
+{
+  "version": "4.3.0",
+  "generated_records": 47152,
+  "safety_records": 4590,
+  "benchmark_records": 6000,
+  "source_files": [
+    "FOOD-DATA-GROUP1(1).csv",
+    "comprehensive_foods_usda(1).csv",
+    "fastfood(1).csv",
+    "food_menu_nutrition_dataset(1).csv",
+    "foods_allergens(1).csv",
+    "foods_dietary_restrictions(1).csv",
+    "foods_health_scores_allergens(1).csv",
+    "healthy_diet_calorie_intake(1).csv",
+    "healthy_foods_database(1).csv"
+  ],
+  "artifacts": {
+    "master_food_index.csv": {
+      "bytes": 6186527,
+      "sha256": "503ca759254d6c5887a938441dfef233b5cd2d344a3b6d7fcdf3fe844ef683f1"
+    },
+    "food_safety_registry.csv": {
+      "bytes": 551496,
+      "sha256": "3aea8ebd75788d82d407c9da6d9bc44d93336552cca9cdef97f62dbb29052799"
+    },
+    "intake_benchmarks.json": {
+      "bytes": 972,
+      "sha256": "c85972ea239f9d09921f7b519488f4dc1cdcb109740410a4e4be279d766f1cd0"
+    },
+    "nutrition_quality_portable.json": {
+      "bytes": 3979119,
+      "sha256": "368226960f5f593c20ac98e71b1a1068b1b96da9d5a139da3d28c8d718360c7c"
+    },
+    "nutrition_quality_model_card.json": {
+      "bytes": 780,
+      "sha256": "273ca3897b54ef91feefedd0711abd2a29b179ad4d779088e8f9dd5c72497573"
+    }
+  },
+  "private_build_artifacts": {
+    "source_record_registry.csv": {
+      "records": 76920,
+      "excluded_from_public_repository": true,
+      "reason": "Contains row-level person benchmark lineage; generate only in an authorized local environment."
+    }
+  },
+  "model_metrics": {
+    "model": "Portable Random Forest",
+    "format": "nutripulse-portable-forest-v1",
+    "samples": 47152,
+    "train_samples": 37721,
+    "test_samples": 9431,
+    "accuracy": 0.93691,
+    "macro_f1": 0.878232,
+    "classes": [
+      "Balanced",
+      "Limit",
+      "Strong"
+    ],
+    "features": [
+      "calories",
+      "protein_g",
+      "fat_g",
+      "carbs_g",
+      "fiber_g",
+      "sugar_g",
+      "sodium_mg",
+      "protein_density",
+      "fiber_density",
+      "sugar_density",
+      "sodium_density"
+    ],
+    "average_confidence": 0.881606,
+    "random_state": 42,
+    "runtime_dependencies": [
+      "Python standard library"
+    ],
+    "training_dependencies": [
+      "pandas",
+      "numpy",
+      "scikit-learn"
+    ],
+    "clinical_scope": "Educational food-quality classification; not diagnosis or dietary prescription."
+  },
+  "source_audit": {
+    "raw_source_records": 76920,
+    "food_related_source_records": 70920,
+    "nutrition_candidate_input_records": 62591,
+    "safety_source_records": 8329,
+    "benchmark_source_records": 6000,
+    "source_file_count": 9,
+    "by_file": [
+      {
+        "source_file": "comprehensive_foods_usda(1).csv",
+        "raw_records": 40000,
+        "record_type": "Food",
+        "integration_purpose": "Nutrition index + classifier",
+        "classifier_candidate": true
+      },
+      {
+        "source_file": "healthy_foods_database(1).csv",
+        "raw_records": 9028,
+        "record_type": "Food",
+        "integration_purpose": "Nutrition index + classifier",
+        "classifier_candidate": true
+      },
+      {
+        "source_file": "food_menu_nutrition_dataset(1).csv",
+        "raw_records": 7500,
+        "record_type": "Menu food",
+        "integration_purpose": "Nutrition index + classifier",
+        "classifier_candidate": true
+      },
+      {
+        "source_file": "FOOD-DATA-GROUP1(1).csv",
+        "raw_records": 551,
+        "record_type": "Food",
+        "integration_purpose": "Nutrition index + classifier",
+        "classifier_candidate": true
+      },
+      {
+        "source_file": "fastfood(1).csv",
+        "raw_records": 515,
+        "record_type": "Restaurant food",
+        "integration_purpose": "Nutrition index + classifier",
+        "classifier_candidate": true
+      },
+      {
+        "source_file": "foods_health_scores_allergens(1).csv",
+        "raw_records": 4997,
+        "record_type": "Packaged food",
+        "integration_purpose": "Nutrition index + safety",
+        "classifier_candidate": true
+      },
+      {
+        "source_file": "foods_dietary_restrictions(1).csv",
+        "raw_records": 4997,
+        "record_type": "Safety product",
+        "integration_purpose": "Allergen/restriction registry",
+        "classifier_candidate": false
+      },
+      {
+        "source_file": "foods_allergens(1).csv",
+        "raw_records": 3332,
+        "record_type": "Safety product",
+        "integration_purpose": "Declared-allergen registry",
+        "classifier_candidate": false
+      },
+      {
+        "source_file": "healthy_diet_calorie_intake(1).csv",
+        "raw_records": 6000,
+        "record_type": "Person benchmark",
+        "integration_purpose": "Population intake benchmarks",
+        "classifier_candidate": false
+      }
+    ],
+    "classifier_ready_unique_records": 47152,
+    "filtered_or_deduplicated_nutrition_records": 15439
+  }
+}

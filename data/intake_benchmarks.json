@@ -1,0 +1,50 @@
+{
+  "records": 6000,
+  "source": "healthy_diet_calorie_intake(1).csv",
+  "numeric_benchmarks": {
+    "Daily_Calorie_Requirement": {
+      "median": 2232.5,
+      "p25": 1941.0,
+      "p75": 2581.25
+    },
+    "Daily_Calorie_Consumed": {
+      "median": 2433.0,
+      "p25": 2057.0,
+      "p75": 2859.0
+    },
+    "Protein_Intake_g": {
+      "median": 108.9,
+      "p25": 78.8,
+      "p75": 155.1
+    },
+    "Carbohydrate_Intake_g": {
+      "median": 297.15,
+      "p25": 229.1,
+      "p75": 366.12
+    },
+    "Fat_Intake_g": {
+      "median": 82.3,
+      "p25": 65.9,
+      "p75": 105.1
+    },
+    "Water_Intake_Liters": {
+      "median": 2.6,
+      "p25": 2.2,
+      "p75": 3.1
+    }
+  },
+  "diet_type_counts": {
+    "Balanced": 1536,
+    "High Protein": 1076,
+    "Vegetarian": 1055,
+    "Mediterranean": 1027,
+    "Keto": 721,
+    "Vegan": 585
+  },
+  "health_status_counts": {
+    "Overweight": 2500,
+    "Healthy": 2249,
+    "Obese": 1076,
+    "Underweight": 175
+  }
+}

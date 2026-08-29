@@ -1,0 +1,38 @@
+{
+  "model": "Portable Random Forest",
+  "format": "nutripulse-portable-forest-v1",
+  "samples": 47152,
+  "train_samples": 37721,
+  "test_samples": 9431,
+  "accuracy": 0.93691,
+  "macro_f1": 0.878232,
+  "classes": [
+    "Balanced",
+    "Limit",
+    "Strong"
+  ],
+  "features": [
+    "calories",
+    "protein_g",
+    "fat_g",
+    "carbs_g",
+    "fiber_g",
+    "sugar_g",
+    "sodium_mg",
+    "protein_density",
+    "fiber_density",
+    "sugar_density",
+    "sodium_density"
+  ],
+  "average_confidence": 0.881606,
+  "random_state": 42,
+  "runtime_dependencies": [
+    "Python standard library"
+  ],
+  "training_dependencies": [
+    "pandas",
+    "numpy",
+    "scikit-learn"
+  ],
+  "clinical_scope": "Educational food-quality classification; not diagnosis or dietary prescription."
+}
