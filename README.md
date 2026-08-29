@@ -1,6 +1,61 @@
-# NutriPulse AI v4.3
+<p align="center">
+  <img src="assets/nutripulse_hero.jpg" alt="NutriPulse AI nutrition intelligence platform" width="100%">
+</p>
+
+<h1 align="center">NutriPulse AI v4.3</h1>
+
+<p align="center">
+  <strong>AI-assisted nutrition intelligence, clinical collaboration and longitudinal diet-plan monitoring.</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
+  <img src="https://img.shields.io/badge/Streamlit-Application-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit application">
+  <img src="https://img.shields.io/badge/FastAPI-REST_API-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Release-v4.3-6A5ACD" alt="Release v4.3">
+  <img src="https://img.shields.io/badge/Source_rows-76%2C920-16423C" alt="76,920 audited source rows">
+</p>
+
+<p align="center">
+  <a href="https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip">
+    <img src="https://img.shields.io/badge/Download-NutriPulse_v4.3-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.3">
+  </a>
+  <a href="RELEASE_NOTES.md">
+    <img src="https://img.shields.io/badge/View-Release_Notes-1F6FEB?style=for-the-badge" alt="View release notes">
+  </a>
+</p>
 
 NutriPulse is a local-first nutrition intelligence platform built with Streamlit, FastAPI, SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.3 adds persistent automatic day/week schedule progression and complete daily/weekly analytics while preserving the separated Customer, Dietitian and Administrator workspaces. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
+
+## Product experience
+
+<table>
+  <tr>
+    <td width="33%" align="center">
+      <img src="assets/food_vision_luxury.jpg" alt="Food Vision and nutrition diary" width="100%"><br>
+      <strong>Food Vision & Diary</strong><br>
+      Image-assisted food recognition with confirmation, nutrition matching and diary logging.
+    </td>
+    <td width="33%" align="center">
+      <img src="assets/lab_nutrition.jpg" alt="Laboratory nutrition intelligence" width="100%"><br>
+      <strong>Laboratory Intelligence</strong><br>
+      OCR/PDF extraction, verification and safety-gated nutrition planning.
+    </td>
+    <td width="33%" align="center">
+      <img src="assets/web_insights.jpg" alt="Evidence and public API extraction" width="100%"><br>
+      <strong>Evidence & Public APIs</strong><br>
+      Curated evidence plus safe extraction from public HTML, JSON, XML, CSV and text resources.
+    </td>
+  </tr>
+</table>
+
+## Download the release package
+
+GitHub generates a clean ZIP package directly from the secured <code>main</code> branch:
+
+**[Download NutriPulse AI v4.3](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+
+The package includes the application, API, audited public data indexes, portable classifier, Food Vision model, launchers, documentation and tests. It excludes passwords, API keys, runtime databases, Customer records, <code>.env</code>, Streamlit secrets and the private person-level row registry.
 
 ## Fastest Windows start
 
