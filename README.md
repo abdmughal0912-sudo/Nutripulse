@@ -17,6 +17,9 @@
 </p>
 
 <p align="center">
+  <a href="https://nutripulse-3765cfgbezsflrv6ht4kaa.streamlit.app/">
+    <img src="https://img.shields.io/badge/Open-Live_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Open the NutriPulse AI live app">
+  </a>
   <a href="https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip">
     <img src="https://img.shields.io/badge/Download-NutriPulse_v4.3-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.3">
   </a>
@@ -26,6 +29,8 @@
 </p>
 
 NutriPulse is a local-first nutrition intelligence platform built with Streamlit, FastAPI, SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.3 adds persistent automatic day/week schedule progression and complete daily/weekly analytics while preserving the separated Customer, Dietitian and Administrator workspaces. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
+
+**Live application:** [NutriPulse AI — Nutrition Analyzer & Dietitian Platform](https://nutripulse-3765cfgbezsflrv6ht4kaa.streamlit.app/)
 
 ## Product experience
 

@@ -76,7 +76,7 @@ from src.web_insights import (
 
 
 st.set_page_config(
-    page_title=f"{APP_NAME} · Nutrition Analyzer",
+    page_title=f"{APP_NAME} | AI Nutrition Analyzer & Dietitian Platform",
     page_icon="🥗",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -116,10 +116,14 @@ def require_login() -> dict:
         return existing
     st.markdown(
         '<div class="np-login-shell"><div class="np-login-mark">NP</div>'
-        '<div><span>NUTRIPULSE PRIVATE HEALTH WORKSPACE</span>'
-        '<h1>Clinical nutrition, beautifully secured.</h1>'
-        '<p>One secure sign-in routes Customers, approved Dietitians and the Administrator into separate role-specific workspaces.</p></div></div>',
+        '<div><span>AI NUTRITION ANALYZER · FOOD VISION · DIETITIAN PLATFORM</span>'
+        '<h1>Personalized nutrition intelligence, beautifully secured.</h1>'
+        '<p>Analyze food images and laboratory reports, build personalized diet plans, track daily and weekly progress, and collaborate securely with a Dietitian.</p></div></div>',
         unsafe_allow_html=True,
+    )
+    st.text(
+        "NutriPulse AI is an AI nutrition analyzer and Dietitian platform for food-image "
+        "analysis, personalized diet plans, laboratory report review, and nutrition progress tracking."
     )
     tab_names = ["Sign in", "Customer sign-up", "Dietitian application"]
     if not has_admin():
