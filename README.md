@@ -2,7 +2,7 @@
   <img src="assets/nutripulse_hero.jpg" alt="NutriPulse AI nutrition intelligence platform" width="100%">
 </p>
 
-<h1 align="center">NutriPulse AI v4.4.1</h1>
+<h1 align="center">NutriPulse AI v4.5.0</h1>
 
 <p align="center">
   <strong>AI-assisted nutrition intelligence, clinical collaboration and longitudinal diet-plan monitoring.</strong>
@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/Streamlit-Application-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit application">
   <img src="https://img.shields.io/badge/FastAPI-REST_API-009688?logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Release-v4.4.1-6A5ACD" alt="Release v4.4.1">
+  <img src="https://img.shields.io/badge/Release-v4.5.0-6A5ACD" alt="Release v4.5.0">
   <img src="https://img.shields.io/badge/Source_rows-76%2C920-16423C" alt="76,920 audited source rows">
 </p>
 
@@ -21,14 +21,14 @@
     <img src="https://img.shields.io/badge/Open-Live_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Open the NutriPulse AI live app">
   </a>
   <a href="https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip">
-    <img src="https://img.shields.io/badge/Download-NutriPulse_v4.4.1-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.4.1">
+    <img src="https://img.shields.io/badge/Download-NutriPulse_v4.5.0-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.5.0">
   </a>
   <a href="RELEASE_NOTES.md">
     <img src="https://img.shields.io/badge/View-Release_Notes-1F6FEB?style=for-the-badge" alt="View release notes">
   </a>
 </p>
 
-NutriPulse is a local-first nutrition intelligence platform built with Streamlit, FastAPI, SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.4.1 adds mandatory email-code verification and a mobile-safe responsive interface while preserving automatic day/week progression, daily/weekly analytics and the separated Customer, Dietitian and Administrator workspaces. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
+NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, persistent PostgreSQL or local SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.5.0 adds reboot-safe cloud account storage while preserving email-code verification, the mobile-responsive interface, automatic day/week progression, daily/weekly analytics and separated Customer, Dietitian and Administrator workspaces. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
 
 **Live application:** [NutriPulse AI — Nutrition Analyzer & Dietitian Platform](https://nutripulse-3765cfgbezsflrv6ht4kaa.streamlit.app/)
 
@@ -58,7 +58,7 @@ NutriPulse is a local-first nutrition intelligence platform built with Streamlit
 
 GitHub generates a clean ZIP package directly from the secured <code>main</code> branch:
 
-**[Download NutriPulse AI v4.4.1](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download NutriPulse AI v4.5.0](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 The package includes the application, API, audited public data indexes, portable classifier, Food Vision model, launchers, documentation and tests. It excludes passwords, API keys, runtime databases, Customer records, <code>.env</code>, Streamlit secrets and the private person-level row registry.
 
@@ -89,6 +89,16 @@ NUTRIPULSE_SMTP_SENDER_NAME = "NutriPulse AI"
 
 Never use or commit the normal Gmail password. See `.streamlit/secrets.toml.example` and `DEPLOYMENT.md` for the complete configuration.
 
+## Persistent accounts on Streamlit Community Cloud
+
+Streamlit Community Cloud can replace the app's local filesystem whenever the app reboots or redeploys. A local SQLite file therefore must not be used for hosted Customer accounts. Create a managed PostgreSQL database (Neon, Supabase, or another PostgreSQL provider), copy its private connection string, and add this root-level secret in Streamlit **App settings → Secrets**:
+
+```toml
+NUTRIPULSE_DATABASE_URL = "postgresql://user:password@host/database?sslmode=require"
+```
+
+Save the secret and reboot the app. Administrator Governance must show **PostgreSQL**, **Managed cloud database**, and **Cloud reboot safe: Yes** before real accounts are created. Keep the URL private because it contains the database password. Local Windows installations continue to use `data/nutripulse.db` automatically.
+
 ## VS Code
 
 Open the exact `NutriPulse_App` folder. The Explorer should show `app.py`, `api.py`, `requirements.txt`, `src`, `data`, and `models`. Then run:
@@ -103,7 +113,7 @@ The launcher selects Python 3.12/3.11, creates `.venv`, installs requirements, s
 
 ### Customer
 
-- Private login and isolated SQLite records.
+- Private login and account-isolated persistent records.
 - Daily Overview with alerts, meal schedule, past records, and future plan graph.
 - Personal profile and laboratory intelligence.
 - Bundled image/scanned-PDF OCR, PDF table extraction, 38 recognized laboratory tests, additional-test capture, and a fresh verification table for every report.
@@ -223,7 +233,7 @@ python scripts/smoke_test.py
 python scripts/ui_smoke_test.py
 ```
 
-The UI test renders every Customer, Dietitian and Administrator page. The smoke test checks Food Vision inference, the portable classifier, dataset integrity, alerts, plans, PDF/CSV/JSON exports and SQLite persistence.
+The UI test renders every Customer, Dietitian and Administrator page. The smoke test checks Food Vision inference, the portable classifier, dataset integrity, alerts, plans, PDF/CSV/JSON exports and database persistence.
 
 ## GitHub
 

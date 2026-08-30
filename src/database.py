@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import uuid
 from contextlib import contextmanager
@@ -11,12 +12,78 @@ from typing import Any, Iterator
 from .constants import DATABASE_PATH
 
 
+def _configured_database_url() -> str:
+    """Return the managed database URL without logging or exposing it."""
+    return os.getenv("NUTRIPULSE_DATABASE_URL", "").strip()
+
+
+def _uses_postgres(db_path: Path = DATABASE_PATH) -> bool:
+    """Use PostgreSQL only for the application's default live database.
+
+    Explicit database paths are intentionally kept on SQLite so local tools and
+    isolated tests never connect to a production database by accident.
+    """
+    return bool(_configured_database_url()) and Path(db_path).resolve() == DATABASE_PATH.resolve()
+
+
+def _postgres_sql(statement: str) -> str:
+    """Translate the DB-API placeholder style used by SQLite to psycopg."""
+    return statement.replace("?", "%s")
+
+
+class _PostgresConnection:
+    """Small compatibility adapter for the subset of DB-API used by NutriPulse."""
+
+    def __init__(self, raw_connection: Any) -> None:
+        self._raw_connection = raw_connection
+
+    def execute(self, statement: str, parameters: tuple[Any, ...] | list[Any] = ()) -> Any:
+        return self._raw_connection.execute(_postgres_sql(statement), parameters)
+
+
+def database_backend(db_path: Path = DATABASE_PATH) -> dict[str, Any]:
+    """Describe whether live records are safe across cloud app restarts."""
+    if _uses_postgres(db_path):
+        return {
+            "engine": "PostgreSQL",
+            "storage": "Managed cloud database",
+            "cloud_persistent": True,
+        }
+    return {
+        "engine": "SQLite",
+        "storage": "Local database file",
+        "cloud_persistent": False,
+    }
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 @contextmanager
-def connection(db_path: Path = DATABASE_PATH) -> Iterator[sqlite3.Connection]:
+def connection(db_path: Path = DATABASE_PATH) -> Iterator[Any]:
+    if _uses_postgres(db_path):
+        try:
+            import psycopg
+            from psycopg.rows import dict_row
+        except ImportError as exc:  # pragma: no cover - exercised in deployment
+            raise RuntimeError(
+                "PostgreSQL storage is configured, but psycopg is not installed. "
+                "Install the project requirements and restart NutriPulse."
+            ) from exc
+
+        raw_connection = psycopg.connect(_configured_database_url(), row_factory=dict_row)
+        conn = _PostgresConnection(raw_connection)
+        try:
+            yield conn
+            raw_connection.commit()
+        except Exception:
+            raw_connection.rollback()
+            raise
+        finally:
+            raw_connection.close()
+        return
+
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -24,6 +91,9 @@ def connection(db_path: Path = DATABASE_PATH) -> Iterator[sqlite3.Connection]:
     try:
         yield conn
         conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
@@ -133,7 +203,7 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
         """
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
-            username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            username TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL CHECK(role IN ('Customer', 'Dietitian')),
             display_name TEXT NOT NULL,
@@ -255,6 +325,10 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
             FOREIGN KEY(customer_id) REFERENCES users(id)
         )
         """,
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx
+        ON users (LOWER(username))
+        """,
     ]
     with connection(db_path) as conn:
         for statement in statements:
@@ -280,7 +354,18 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
             },
         }
         for table_name, additions in migrations.items():
-            present = {str(row["name"]) for row in conn.execute(f"PRAGMA table_info({table_name})")}
+            if _uses_postgres(db_path):
+                present = {
+                    str(row["name"])
+                    for row in conn.execute(
+                        """SELECT column_name AS name
+                           FROM information_schema.columns
+                           WHERE table_schema = current_schema() AND table_name = ?""",
+                        (table_name,),
+                    )
+                }
+            else:
+                present = {str(row["name"]) for row in conn.execute(f"PRAGMA table_info({table_name})")}
             for column_name, definition in additions.items():
                 if column_name not in present:
                     conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
@@ -599,7 +684,7 @@ def get_user(user_id: str, db_path: Path = DATABASE_PATH) -> dict[str, Any] | No
 def get_user_by_username(username: str, db_path: Path = DATABASE_PATH) -> dict[str, Any] | None:
     with connection(db_path) as conn:
         row = conn.execute(
-            "SELECT * FROM users WHERE username = ? COLLATE NOCASE", (username.strip(),),
+            "SELECT * FROM users WHERE LOWER(username) = LOWER(?)", (username.strip(),),
         ).fetchone()
     return dict(row) if row else None
 
@@ -672,7 +757,7 @@ def list_users(role: str | None = None, db_path: Path = DATABASE_PATH) -> list[d
     if role:
         sql += " WHERE role = ?"
         parameters = (role,)
-    sql += " ORDER BY display_name COLLATE NOCASE"
+    sql += " ORDER BY LOWER(display_name)"
     with connection(db_path) as conn:
         rows = conn.execute(sql, parameters).fetchall()
     return [dict(row) for row in rows]
@@ -744,8 +829,8 @@ def list_caseload_links(db_path: Path = DATABASE_PATH) -> list[dict[str, Any]]:
                FROM dietitian_customer_links links
                JOIN users dietitian ON dietitian.id = links.dietitian_id
                JOIN users customer ON customer.id = links.customer_id
-               ORDER BY dietitian.display_name COLLATE NOCASE,
-                        customer.display_name COLLATE NOCASE"""
+               ORDER BY LOWER(dietitian.display_name),
+                        LOWER(customer.display_name)"""
         ).fetchall()
     return [dict(row) for row in rows]
 
@@ -758,7 +843,7 @@ def list_linked_customers(dietitian_id: str, db_path: Path = DATABASE_PATH) -> l
                FROM dietitian_customer_links JOIN users ON users.id = dietitian_customer_links.customer_id
                WHERE dietitian_customer_links.dietitian_id = ? AND dietitian_customer_links.status = 'Active'
                      AND users.active = 1
-               ORDER BY users.display_name COLLATE NOCASE""",
+               ORDER BY LOWER(users.display_name)""",
             (dietitian_id,),
         ).fetchall()
     return [dict(row) for row in rows]
@@ -772,7 +857,7 @@ def list_linked_dietitians(customer_id: str, db_path: Path = DATABASE_PATH) -> l
                FROM dietitian_customer_links JOIN users ON users.id = dietitian_customer_links.dietitian_id
                WHERE dietitian_customer_links.customer_id = ? AND dietitian_customer_links.status = 'Active'
                      AND users.active = 1 AND users.approval_status = 'Approved'
-               ORDER BY users.display_name COLLATE NOCASE""",
+               ORDER BY LOWER(users.display_name)""",
             (customer_id,),
         ).fetchall()
     return [dict(row) for row in rows]
@@ -997,11 +1082,12 @@ def create_meal_schedule(profile_id: str, plan_id: str, plan: dict[str, Any],
             scheduled_date = (start + timedelta(days=day_index)).isoformat()
             for meal_index, meal in enumerate(day.get("meals", [])):
                 cursor = conn.execute(
-                    """INSERT OR IGNORE INTO meal_schedule
+                    """INSERT INTO meal_schedule
                        (id, profile_id, plan_id, scheduled_date, day_name, meal_index,
                         scheduled_time, meal_name, meal_detail, calories, protein_g,
                         status, completed_at, created_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Planned', NULL, ?)""",
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Planned', NULL, ?)
+                       ON CONFLICT(plan_id, scheduled_date, meal_index) DO NOTHING""",
                     (str(uuid.uuid4()), profile_id, plan_id, scheduled_date, str(day.get("day", "Day")),
                      meal_index, str(meal.get("time", "12:00")), str(meal.get("name", "Meal")),
                      str(meal.get("detail", "")), float(meal.get("calories", 0)),

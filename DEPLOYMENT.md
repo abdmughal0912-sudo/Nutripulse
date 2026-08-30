@@ -1,4 +1,4 @@
-# NutriPulse v4.4 deployment
+# NutriPulse v4.5 deployment
 
 ## Local Windows deployment
 
@@ -8,6 +8,7 @@ Use Python 3.12 or 3.11. Extract the project, open `NutriPulse_App`, and run `ST
 
 ```text
 NUTRIPULSE_ADMIN_SETUP_CODE=<long private first-administrator setup code>
+NUTRIPULSE_DATABASE_URL=<private managed PostgreSQL connection string>
 NUTRIPULSE_API_KEY=<long independent API secret>
 NUTRIPULSE_CORS_ORIGINS=https://your-frontend.example
 NUTRIPULSE_UTC_OFFSET_HOURS=5
@@ -38,10 +39,25 @@ NUTRIPULSE_ASSISTANT_API_KEY=<secret>
 
 The row-level `data/source_record_registry.csv` is private build output and is excluded from the public repository. Generate it only in an authorized environment from the original nine source files. The public `data/dataset_manifest.json` retains aggregate counts and model lineage.
 
+## Streamlit Community Cloud persistent storage
+
+The Streamlit app container and its local SQLite file can be replaced during a reboot or redeploy. Use a managed PostgreSQL database for hosted accounts:
+
+1. Create a PostgreSQL database with Neon, Supabase, or another provider.
+2. Copy its connection string and ensure TLS is enabled, commonly with `sslmode=require`.
+3. Open Streamlit Community Cloud → your app → **App settings → Secrets**.
+4. Add `NUTRIPULSE_DATABASE_URL = "postgresql://..."` at the root alongside the Administrator and SMTP secrets.
+5. Save the secrets and reboot the app.
+6. Sign in as Administrator and confirm **Cloud reboot safe: Yes** in Administrator Governance.
+7. Create the Administrator and user accounts once. Future reboots and GitHub redeploys reuse the same PostgreSQL records.
+
+Never commit this URL. It contains database credentials. If records were already deleted from Streamlit's temporary SQLite file, they cannot be recovered without a private `nutripulse.db` backup.
+
 Optional paths:
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
+| `NUTRIPULSE_DATABASE_URL` | Managed PostgreSQL database; required for ephemeral cloud hosts | empty (uses SQLite) |
 | `NUTRIPULSE_DATABASE_PATH` | SQLite database | `data/nutripulse.db` |
 | `NUTRIPULSE_FOOD_DATA_PATH` | Master food CSV | `data/master_food_index.csv` |
 | `NUTRIPULSE_DATA_DIR` | Data directory | `data` |
@@ -83,3 +99,11 @@ The named volume stores the SQLite database. Back it up before upgrades.
 ## Upgrade from an earlier version
 
 Copy `data/nutripulse.db` into the new `data` folder before first start. Database initialization is additive and preserves approval, administrator, clinical-note, prescription, typed-message, report-linkage and meal-completion history. Existing approved Dietitian accounts remain active. Legacy `default-profile` data remains in the database but is not automatically assigned to a new account; migrate it only with appropriate identity verification and consent.
+
+To import a private SQLite backup into the configured PostgreSQL database, set `NUTRIPULSE_DATABASE_URL`, then run:
+
+```bash
+python scripts/migrate_sqlite_to_postgres.py /private/path/nutripulse.db
+```
+
+The importer uses primary-key conflict protection and does not overwrite existing PostgreSQL rows. Back up both databases first and handle all Customer data according to your privacy and consent requirements.

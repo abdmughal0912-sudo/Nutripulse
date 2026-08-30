@@ -25,6 +25,7 @@ from src.database import (
     add_measurement,
     create_meal_schedule,
     create_questionnaire,
+    database_backend,
     delete_food_log,
     get_food_logs,
     get_measurements,
@@ -91,9 +92,6 @@ st.set_page_config(
 apply_theme()
 
 
-initialize_database()
-
-
 def secret_value(name: str, default: str = "") -> str:
     configured = os.getenv(name, "").strip()
     if configured:
@@ -105,6 +103,21 @@ def secret_value(name: str, default: str = "") -> str:
     except Exception:
         pass
     return default
+
+
+database_url_secret = secret_value("NUTRIPULSE_DATABASE_URL")
+if database_url_secret:
+    os.environ["NUTRIPULSE_DATABASE_URL"] = database_url_secret
+
+try:
+    initialize_database()
+except Exception as exc:
+    st.error(
+        "NutriPulse could not connect to its application database. Check "
+        "NUTRIPULSE_DATABASE_URL in Streamlit App settings → Secrets, then reboot the app."
+    )
+    st.caption(f"Database startup error: {type(exc).__name__}")
+    st.stop()
 
 
 def admin_setup_code() -> str:
@@ -1727,7 +1740,7 @@ def render_food_library() -> None:
 
 
 def render_progress() -> None:
-    hero("Longitudinal monitoring", "Progress that shows<br><em>the pattern, not just the number.</em>", "Track weight, waist, hydration and plan adherence over time with data stored locally in SQLite.")
+    hero("Longitudinal monitoring", "Progress that shows<br><em>the pattern, not just the number.</em>", "Track weight, waist, hydration and plan adherence over time in the configured application database.")
     with st.form("measurement_form"):
         c1, c2, c3, c4, c5 = st.columns(5)
         measured_on = c1.date_input("Date", date.today())
@@ -2352,6 +2365,18 @@ def render_admin_governance() -> None:
         "Approve professionals.<br><em>Control clinical access and caseloads.</em>",
         "Approve or reject Dietitian applications, assign customers and audit role access without exposing private clinical notes.",
     )
+    storage = database_backend()
+    if storage["cloud_persistent"]:
+        st.success("Persistent PostgreSQL storage is active. Accounts and clinical history survive app reboots and redeploys.")
+    else:
+        st.warning(
+            "Local SQLite storage is active. This is safe for a local Windows installation, but Streamlit "
+            "Community Cloud can erase it during a reboot. Configure NUTRIPULSE_DATABASE_URL before creating accounts."
+        )
+    storage_columns = st.columns(3)
+    storage_columns[0].metric("Database", storage["engine"])
+    storage_columns[1].metric("Storage", storage["storage"])
+    storage_columns[2].metric("Cloud reboot safe", "Yes" if storage["cloud_persistent"] else "No")
     applications_tab, assignments_tab, accounts_tab = st.tabs(["Dietitian approvals", "Caseload assignments", "Account directory"])
     with applications_tab:
         applications = [item for item in list_users("Dietitian") if not int(item.get("is_admin", 0))]
@@ -2847,7 +2872,7 @@ def render_admin() -> None:
             st.json(vision_status, expanded=True)
     st.subheader("Deployment readiness")
     readiness = pd.DataFrame([
-        ["SQLite persistence", "Ready", "Profiles, reports, plans, diaries, progress and reviews"],
+        ["Application database", database_backend()["engine"], "PostgreSQL for persistent cloud deployment; SQLite for local Windows use"],
         ["Role-based accounts", "Ready", "PBKDF2 passwords, separated Customer/Dietitian/Admin workspaces and approval gates"],
         ["Lab OCR", "Ready with fallback", "Bundled RapidOCR for images/scanned PDFs; Tesseract remains optional"],
         ["Clinical safety rules", "Ready for prototype", "Requires jurisdiction-specific expert validation"],
@@ -2917,11 +2942,12 @@ st.sidebar.markdown(
     unsafe_allow_html=True,
 )
 st.sidebar.markdown('<span class="np-badge"><i class="np-dot"></i>Safety layer active</span>', unsafe_allow_html=True)
-st.sidebar.caption(f"{APP_SUBTITLE}\n\nVersion {APP_VERSION} · Local-first · SQLite storage")
+storage_status = database_backend()
+st.sidebar.caption(f"{APP_SUBTITLE}\n\nVersion {APP_VERSION} · {storage_status['engine']} storage")
 st.markdown(
     f'<div class="np-command-bar"><div><span class="np-command-orb"></span><b>NutriPulse Intelligence</b>'
     f'<small>{html.escape(selected_page.replace("  ", " "))}</small></div>'
-    f'<div class="np-command-status"><span>{active_alert_count} alerts</span><span>API-ready</span><span>Local data boundary</span></div></div>',
+    f'<div class="np-command-status"><span>{active_alert_count} alerts</span><span>API-ready</span><span>{html.escape(storage_status["engine"])} data</span></div></div>',
     unsafe_allow_html=True,
 )
 pages[selected_page]()

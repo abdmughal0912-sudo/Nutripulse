@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
 REQUIRED_MODULES = [
     "streamlit", "fastapi", "uvicorn", "pandas", "numpy", "plotly",
     "PIL", "cv2", "rapidocr", "pypdfium2", "requests", "pdfplumber", "reportlab",
+    "psycopg",
 ]
 OPTIONAL_MODULES = ["onnxruntime"]
 

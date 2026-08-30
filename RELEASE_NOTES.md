@@ -1,13 +1,17 @@
-# NutriPulse AI v4.4.1 — Release Notes
+# NutriPulse AI v4.5.0 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.4.1 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.5.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 ## Release highlights
 
+- Persistent PostgreSQL storage for Streamlit Community Cloud accounts, plans, messages, reports and progress.
+- Automatic local SQLite fallback for Windows and isolated test databases.
+- Administrator storage-status panel that warns before accounts are created on an ephemeral cloud filesystem.
+- Conflict-safe private SQLite-to-PostgreSQL backup migration utility.
 - Mobile-safe sidebar, stacked forms, horizontally scrollable tabs and responsive charts/tables.
 - Clear email-service setup notice instead of a technical sign-in error when SMTP secrets are missing.
 - Mandatory six-digit email verification after every successful password check.

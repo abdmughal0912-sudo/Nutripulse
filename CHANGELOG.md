@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.5.0 — 2026-08-30
+
+- Added persistent PostgreSQL storage activated by `NUTRIPULSE_DATABASE_URL` for Streamlit Community Cloud and other ephemeral hosts.
+- Retained automatic SQLite storage for local Windows installations and explicit isolated test databases.
+- Added Administrator storage health indicators and an explicit cloud reboot-safety warning.
+- Added a conflict-safe utility for importing a private SQLite backup into PostgreSQL.
+- Updated all username, schedule and schema operations for PostgreSQL/SQLite compatibility.
+
 ## 4.3.0 — 2026-08-29
 
 - Added persistent active-day tracking derived from the saved SQLite meal schedule.
