@@ -19,7 +19,7 @@ DATABASE_PATH = environment_path("NUTRIPULSE_DATABASE_PATH", DATA_DIR / "nutripu
 
 APP_NAME = "NutriPulse AI"
 APP_SUBTITLE = "Clinical-safe Nutrition Intelligence"
-APP_VERSION = "4.4.0"
+APP_VERSION = "4.4.1"
 
 ACTIVITY_FACTORS = {
     "Sedentary": 1.20,

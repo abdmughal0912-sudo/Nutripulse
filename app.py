@@ -86,7 +86,7 @@ st.set_page_config(
     page_title=f"{APP_NAME} | AI Nutrition Analyzer & Dietitian Platform",
     page_icon="🥗",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 apply_theme()
 
@@ -267,6 +267,15 @@ def require_login() -> dict:
     pending_user = st.session_state.get("pending_auth_user")
     if pending_user:
         render_email_verification(pending_user)
+    email_configuration_error = ""
+    try:
+        smtp_settings().validate()
+    except ValueError as exc:
+        email_configuration_error = str(exc)
+        st.warning(
+            "Secure email sign-in is temporarily unavailable while the Administrator "
+            "finishes the email sender configuration in Streamlit Secrets."
+        )
     tab_names = ["Sign in", "Customer sign-up", "Dietitian application"]
     if not has_admin():
         tab_names.append("First admin setup")
@@ -276,7 +285,10 @@ def require_login() -> dict:
         with st.form("account_login"):
             username = st.text_input("Username", key="login_username")
             password = st.text_input("Password", type="password", key="login_password")
-            submitted = st.form_submit_button("Enter NutriPulse", type="primary", width="stretch")
+            submitted = st.form_submit_button(
+                "Enter NutriPulse", type="primary", width="stretch",
+                disabled=bool(email_configuration_error),
+            )
         if submitted:
             user, message = authenticate_with_status(username, password, record_success=False)
             if user:

@@ -215,8 +215,46 @@ def apply_theme() -> None:
         .np-meal-skipped { opacity:.58; border-left:3px solid var(--np-orange); padding-left:.65rem; }
         @keyframes np-pulse { 0%,100%{opacity:.55;transform:scale(.88)} 50%{opacity:1;transform:scale(1.15)} }
         hr { border-color:var(--np-line); }
-        @media(max-width:900px) { .np-command-status span:nth-child(n+2){display:none}.np-command-bar{align-items:flex-start}.np-hero{padding:1.4rem 1.1rem} }
-        @media(max-width:720px) { .block-container{padding:.8rem .75rem 3rem}.np-meal{grid-template-columns:55px 1fr}.np-meal>span{display:none}.np-command-bar small{display:none} }
+        [data-testid="column"] { min-width:0!important; }
+        @media(max-width:900px) {
+          .np-command-status span:nth-child(n+2){display:none}
+          .np-command-bar{align-items:flex-start}
+          .np-hero{padding:1.4rem 1.1rem}
+        }
+        @media(max-width:720px) {
+          html,body,.stApp,[data-testid="stAppViewContainer"]{max-width:100vw;overflow-x:hidden}
+          .block-container{padding:.8rem .75rem 3rem;max-width:100vw}
+          [data-testid="stSidebar"]{width:min(86vw,320px)!important}
+          div[data-testid="stHorizontalBlock"]{flex-wrap:wrap!important;gap:.65rem!important}
+          div[data-testid="column"]{width:100%!important;flex:1 1 100%!important;min-width:0!important}
+          .np-login-shell{grid-template-columns:1fr;margin:1rem 0;padding:1.25rem;border-radius:22px;gap:.9rem}
+          .np-login-mark{width:58px;height:58px;border-radius:18px;font-size:1rem}
+          .np-login-shell span{font-size:.56rem;letter-spacing:.13em;line-height:1.55;display:block}
+          .np-login-shell h1{font-size:clamp(1.75rem,9vw,2.35rem)!important;line-height:1.08!important}
+          .np-login-shell p{font-size:.88rem;line-height:1.55}
+          .np-hero{border-radius:20px}
+          .np-hero.visual{min-height:310px;background-position:58% center}
+          .np-empty-vision{min-height:280px;padding:1.2rem}
+          .np-meal{grid-template-columns:55px 1fr;gap:.65rem}
+          .np-meal>span{display:none}
+          .np-command-bar{flex-direction:column;gap:.45rem;padding:.7rem .75rem}
+          .np-command-bar small{display:none}
+          .stTabs [data-baseweb="tab-list"]{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;padding-bottom:.2rem}
+          .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar{display:none}
+          .stTabs [data-baseweb="tab"]{flex:0 0 auto;white-space:nowrap;padding:.45rem .65rem}
+          div[data-testid="stMetric"]{padding:.8rem .9rem}
+          div[data-testid="stMetricValue"]{font-size:1.45rem}
+          div[data-testid="stDataFrame"],div[data-testid="stTable"]{max-width:calc(100vw - 1.5rem);overflow-x:auto}
+          div[data-testid="stPlotlyChart"],div[data-testid="stImage"],img,iframe{max-width:100%!important}
+          .stTextInput input,.stNumberInput input,.stTextArea textarea{font-size:16px!important}
+        }
+        @media(max-width:420px) {
+          .block-container{padding:.65rem .55rem 2.5rem}
+          .np-login-shell{padding:1rem;border-radius:18px}
+          .np-panel,.np-card{padding:.9rem;border-radius:16px}
+          .np-hero{padding:1.1rem .9rem}
+          h1{font-size:clamp(1.7rem,10vw,2.25rem)!important}
+        }
         </style>
         """,
         unsafe_allow_html=True,

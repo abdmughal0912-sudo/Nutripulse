@@ -1,13 +1,15 @@
-# NutriPulse AI v4.4 — Release Notes
+# NutriPulse AI v4.4.1 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.4 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.4.1 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 ## Release highlights
 
+- Mobile-safe sidebar, stacked forms, horizontally scrollable tabs and responsive charts/tables.
+- Clear email-service setup notice instead of a technical sign-in error when SMTP secrets are missing.
 - Mandatory six-digit email verification after every successful password check.
 - Ten-minute code expiry, five-attempt limit and a 60-second resend cooldown.
 - One-time verified-email enrollment for existing accounts without an email.
