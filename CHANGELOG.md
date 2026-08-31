@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.6.0 — 2026-08-31
+
+- Added a public, luxury dark landing page with top-right Log in and Sign up actions.
+- Added animated nutrition feature cards, capability marquee and role-security proof section.
+- Rebuilt authentication as a responsive dark split-screen experience inspired by the supplied references.
+- Preserved Gmail verification, private Administrator setup, Dietitian approval and role-separated portals.
+- Added reduced-motion accessibility and dedicated mobile layouts for the landing and authentication views.
+
 ## 4.5.0 — 2026-08-30
 
 - Added persistent PostgreSQL storage activated by `NUTRIPULSE_DATABASE_URL` for Streamlit Community Cloud and other ephemeral hosts.

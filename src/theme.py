@@ -199,6 +199,75 @@ def apply_theme() -> None:
         .np-login-shell span { color:var(--np-gold); font-size:.62rem; font-weight:900; letter-spacing:.2em; }
         .np-login-shell h1 { margin:.35rem 0 .55rem; font-size:clamp(2rem,4vw,3.5rem)!important; }
         .np-login-shell p { margin:0; max-width:760px; line-height:1.7; }
+        .np-nav-brand { display:flex; align-items:center; gap:.7rem; min-height:3.1rem; }
+        .np-nav-brand>b { width:38px; height:38px; display:grid; place-items:center; border-radius:12px; color:#07100f; background:linear-gradient(135deg,var(--np-lime),var(--np-gold)); box-shadow:0 0 28px rgba(191,245,109,.14); }
+        .np-nav-brand strong { display:block; color:#fff; font-size:1rem; letter-spacing:-.03em; }
+        .np-nav-brand small { display:block; color:var(--np-gold); font-size:.52rem; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+        .np-landing-nav-marker,.np-auth-nav { display:block; }
+        div[data-testid="stHorizontalBlock"]:has(.np-landing-nav-marker),
+        div[data-testid="stHorizontalBlock"]:has(.np-auth-nav) { align-items:center; flex-wrap:nowrap!important; margin:.1rem 0 1.6rem; }
+        div[data-testid="stHorizontalBlock"]:has(.np-landing-nav-marker) .stButton>button,
+        div[data-testid="stHorizontalBlock"]:has(.np-auth-nav) .stButton>button { min-height:2.55rem; border-radius:999px; white-space:nowrap; }
+        .np-landing-copy { padding:4.3rem 1.2rem 2.5rem 0; animation:np-rise .8s cubic-bezier(.2,.8,.2,1) both; }
+        .np-landing-kicker { color:var(--np-cyan); font-size:.65rem; font-weight:900; letter-spacing:.2em; text-transform:uppercase; }
+        .np-landing-copy h1 { max-width:820px; margin:.8rem 0 1.2rem; font-size:clamp(3.6rem,7.2vw,7rem)!important; line-height:.89!important; letter-spacing:-.075em; }
+        .np-landing-copy h1 em { color:transparent; font-style:normal; background:linear-gradient(100deg,var(--np-lime),var(--np-champagne) 55%,var(--np-cyan)); background-clip:text; -webkit-background-clip:text; }
+        .np-landing-copy>p { max-width:680px; color:#a8bbb5; font-size:1rem; line-height:1.8; }
+        .np-trust-row { display:flex; flex-wrap:wrap; gap:.6rem 1.6rem; margin-top:1.8rem; }
+        .np-trust-row span { color:#81968f; font-size:.69rem; }
+        .np-trust-row b { color:#edf8f4; font-size:.84rem; margin-right:.25rem; }
+        .np-landing-visual { position:relative; min-height:590px; overflow:hidden; border:1px solid rgba(216,179,91,.25); border-radius:34px; background-position:center; background-size:cover; box-shadow:0 42px 130px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.08); animation:np-visual-in 1s .1s cubic-bezier(.2,.8,.2,1) both; }
+        .np-landing-visual:before { content:""; position:absolute; inset:0; background:linear-gradient(145deg,rgba(3,8,6,.14),rgba(3,8,6,.78)),radial-gradient(circle at 60% 35%,rgba(191,245,109,.12),transparent 34%); }
+        .np-visual-grid { position:absolute; inset:0; opacity:.22; background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px); background-size:46px 46px; mask-image:linear-gradient(to bottom,transparent,black 35%,transparent); }
+        .np-scan-line { position:absolute; left:8%; right:8%; top:24%; height:1px; background:linear-gradient(90deg,transparent,var(--np-lime),transparent); filter:drop-shadow(0 0 8px var(--np-lime)); animation:np-scan 5s ease-in-out infinite; }
+        .np-floating-card { position:absolute; z-index:2; padding:.85rem 1rem; border:1px solid rgba(255,255,255,.13); border-radius:16px; background:rgba(5,15,12,.72); box-shadow:0 22px 60px rgba(0,0,0,.3); backdrop-filter:blur(18px); animation:np-float 5s ease-in-out infinite; }
+        .np-floating-card span { display:block; color:var(--np-gold); font-size:.53rem; font-weight:900; letter-spacing:.15em; text-transform:uppercase; }
+        .np-floating-card strong { display:block; margin-top:.22rem; color:#fff; font-size:.88rem; }
+        .np-floating-card.a { left:5%; top:11%; }.np-floating-card.b { right:5%; top:44%; animation-delay:-1.7s }.np-floating-card.c { left:8%; bottom:8%; animation-delay:-3.1s }
+        .np-marquee { overflow:hidden; margin:3rem -2.35rem 4.2rem; padding:1rem 0; border-block:1px solid var(--np-line); background:rgba(255,255,255,.018); }
+        .np-marquee-track { display:flex; width:max-content; gap:2.8rem; animation:np-marquee 28s linear infinite; }
+        .np-marquee-track span { color:#8fa39c; font-size:.68rem; font-weight:850; letter-spacing:.16em; text-transform:uppercase; white-space:nowrap; }
+        .np-marquee-track b { color:var(--np-lime); margin-right:.55rem; }
+        .np-section-intro { max-width:760px; margin:0 auto 2.3rem; text-align:center; }
+        .np-section-intro h2 { color:#fff; font-size:clamp(2rem,4vw,3.6rem); margin:.45rem 0 .7rem; }
+        .np-section-intro p { line-height:1.75; }
+        .np-feature-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; margin-bottom:5rem; }
+        .np-feature { min-height:220px; padding:1.35rem; border:1px solid var(--np-line); border-radius:22px; background:linear-gradient(145deg,rgba(17,34,29,.8),rgba(7,16,13,.88)); transition:transform .25s ease,border-color .25s ease; }
+        .np-feature:hover { transform:translateY(-5px); border-color:rgba(216,179,91,.35); }
+        .np-feature i { display:grid; place-items:center; width:42px; height:42px; border-radius:13px; color:#07100f; font-style:normal; font-weight:950; background:linear-gradient(135deg,var(--np-lime),var(--np-gold)); }
+        .np-feature h3 { color:#fff; margin:1.2rem 0 .55rem; }
+        .np-feature p { font-size:.79rem; line-height:1.7; }
+        .np-landing-proof { display:grid; grid-template-columns:1.15fr .85fr; gap:1rem; margin-bottom:4rem; }
+        .np-proof-copy,.np-proof-stats { padding:2rem; border:1px solid var(--np-line); border-radius:26px; background:linear-gradient(135deg,rgba(18,36,30,.88),rgba(6,15,12,.92)); }
+        .np-proof-copy h2 { color:#fff; font-size:clamp(2rem,4vw,3.3rem); margin:.3rem 0 .8rem; }
+        .np-proof-copy p { line-height:1.75; }
+        .np-proof-stats { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
+        .np-proof-stat { padding:1rem; border:1px solid var(--np-line); border-radius:16px; background:rgba(255,255,255,.025); }
+        .np-proof-stat b { display:block; color:var(--np-champagne); font-size:1.55rem; }
+        .np-proof-stat span { color:var(--np-muted); font-size:.65rem; }
+        .np-landing-footer { margin-top:2rem; padding:2rem 0; border-top:1px solid var(--np-line); color:#657a73; font-size:.68rem; text-align:center; }
+        div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker) { min-height:720px; align-items:stretch; gap:0!important; overflow:hidden; border:1px solid var(--np-line-gold); border-radius:30px; background:rgba(5,13,10,.9); box-shadow:0 45px 140px rgba(0,0,0,.43); animation:np-rise .65s ease-out both; }
+        div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div[data-testid="column"]:first-child { padding:2.2rem 2.4rem; max-height:820px; overflow:auto; }
+        div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div[data-testid="column"]:last-child { min-height:720px; }
+        .np-auth-form-marker { display:block; margin:1rem 0 1.2rem; }
+        .np-auth-form-marker span { color:var(--np-gold); font-size:.58rem; font-weight:900; letter-spacing:.18em; text-transform:uppercase; }
+        .np-auth-form-marker h1 { color:#fff; margin:.35rem 0 .45rem; font-size:clamp(2rem,4vw,3.2rem)!important; }
+        .np-auth-form-marker h1 em { color:transparent; font-style:normal; background:linear-gradient(90deg,var(--np-lime),var(--np-champagne)); background-clip:text; -webkit-background-clip:text; }
+        .np-auth-form-marker p { line-height:1.65; }
+        .np-auth-visual { position:relative; min-height:720px; height:100%; overflow:hidden; display:flex; align-items:flex-end; padding:2.4rem; background-position:center; background-size:cover; }
+        .np-auth-visual:before { content:""; position:absolute; inset:0; background:linear-gradient(to top,rgba(3,8,7,.92),rgba(3,8,7,.05) 60%),radial-gradient(circle at 70% 25%,rgba(85,228,210,.13),transparent 32%); }
+        .np-auth-glow { position:absolute; width:280px; height:280px; right:10%; top:13%; border:1px solid rgba(191,245,109,.28); border-radius:50%; box-shadow:0 0 90px rgba(191,245,109,.1),inset 0 0 60px rgba(85,228,210,.06); animation:np-orbit 14s linear infinite; }
+        .np-auth-glow:after { content:""; position:absolute; width:10px; height:10px; left:15%; top:5%; border-radius:50%; background:var(--np-lime); box-shadow:0 0 20px var(--np-lime); }
+        .np-auth-copy { position:relative; z-index:1; max-width:520px; }
+        .np-auth-copy span { color:var(--np-cyan); font-size:.6rem; font-weight:900; letter-spacing:.17em; text-transform:uppercase; }
+        .np-auth-copy h2 { color:#fff; margin:.6rem 0 .75rem; font-size:clamp(2.1rem,4vw,3.6rem); line-height:1; }
+        .np-auth-copy p { color:#b7c8c2; line-height:1.72; }
+        @keyframes np-rise { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:none} }
+        @keyframes np-visual-in { from{opacity:0;transform:translateX(28px) scale(.98)} to{opacity:1;transform:none} }
+        @keyframes np-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes np-scan { 0%,100%{top:16%;opacity:.2} 50%{top:78%;opacity:1} }
+        @keyframes np-orbit { to{transform:rotate(360deg)} }
+        @keyframes np-marquee { to{transform:translateX(-50%)} }
         .np-user-chip { display:flex; flex-direction:column; padding:.75rem .8rem; border:1px solid var(--np-line-gold); border-radius:15px;
           background:linear-gradient(120deg,rgba(216,179,91,.08),rgba(85,228,210,.035)); margin:.2rem 0 .65rem; }
         .np-user-chip span { color:var(--np-gold); font-size:.55rem; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
@@ -220,6 +289,9 @@ def apply_theme() -> None:
           .np-command-status span:nth-child(n+2){display:none}
           .np-command-bar{align-items:flex-start}
           .np-hero{padding:1.4rem 1.1rem}
+          .np-feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+          .np-landing-proof{grid-template-columns:1fr}
+          .np-landing-copy h1{font-size:clamp(3.1rem,9vw,5.6rem)!important}
         }
         @media(max-width:720px) {
           html,body,.stApp,[data-testid="stAppViewContainer"]{max-width:100vw;overflow-x:hidden}
@@ -227,6 +299,27 @@ def apply_theme() -> None:
           [data-testid="stSidebar"]{width:min(86vw,320px)!important}
           div[data-testid="stHorizontalBlock"]{flex-wrap:wrap!important;gap:.65rem!important}
           div[data-testid="column"]{width:100%!important;flex:1 1 100%!important;min-width:0!important}
+          div[data-testid="stHorizontalBlock"]:has(.np-landing-nav-marker),div[data-testid="stHorizontalBlock"]:has(.np-auth-nav){flex-wrap:nowrap!important;gap:.35rem!important;margin-bottom:.8rem}
+          div[data-testid="stHorizontalBlock"]:has(.np-landing-nav-marker)>div[data-testid="column"],div[data-testid="stHorizontalBlock"]:has(.np-auth-nav)>div[data-testid="column"]{width:auto!important;flex:0 1 auto!important}
+          div[data-testid="stHorizontalBlock"]:has(.np-landing-nav-marker)>div[data-testid="column"]:first-child,div[data-testid="stHorizontalBlock"]:has(.np-auth-nav)>div[data-testid="column"]:first-child{flex:1 1 auto!important}
+          .np-nav-brand small{display:none}
+          .np-landing-copy{padding:2.2rem 0 1.25rem}
+          .np-landing-copy h1{font-size:clamp(2.8rem,15vw,4.4rem)!important}
+          .np-landing-copy>p{font-size:.92rem;line-height:1.65}
+          .np-trust-row{gap:.5rem 1rem;margin-top:1.2rem}
+          .np-landing-visual{min-height:440px;border-radius:24px}
+          .np-floating-card{padding:.65rem .75rem}.np-floating-card strong{font-size:.74rem}
+          .np-marquee{margin:2.2rem -.75rem 3rem}
+          .np-feature-grid{grid-template-columns:1fr;margin-bottom:3rem}
+          .np-feature{min-height:0}
+          .np-proof-copy,.np-proof-stats{padding:1.25rem;border-radius:20px}
+          div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker){min-height:0;border-radius:22px;flex-direction:column!important}
+          div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div[data-testid="column"]{width:100%!important;flex:1 1 100%!important}
+          div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div[data-testid="column"]:first-child{padding:1.25rem;max-height:none;order:1}
+          div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div[data-testid="column"]:last-child{min-height:360px;order:2}
+          .np-auth-visual{min-height:360px;padding:1.4rem}
+          .np-auth-glow{width:180px;height:180px}
+          .np-auth-copy h2{font-size:2.1rem}
           .np-login-shell{grid-template-columns:1fr;margin:1rem 0;padding:1.25rem;border-radius:22px;gap:.9rem}
           .np-login-mark{width:58px;height:58px;border-radius:18px;font-size:1rem}
           .np-login-shell span{font-size:.56rem;letter-spacing:.13em;line-height:1.55;display:block}
@@ -250,10 +343,19 @@ def apply_theme() -> None:
         }
         @media(max-width:420px) {
           .block-container{padding:.65rem .55rem 2.5rem}
+          .np-nav-brand strong{font-size:.86rem}
+          div[data-testid="stHorizontalBlock"]:has(.np-landing-nav-marker) .stButton>button,div[data-testid="stHorizontalBlock"]:has(.np-auth-nav) .stButton>button{padding-inline:.55rem;min-height:2.35rem;font-size:.76rem}
+          .np-landing-copy h1{font-size:clamp(2.45rem,15vw,3.5rem)!important}
+          .np-landing-visual{min-height:380px}
+          .np-proof-stats{grid-template-columns:1fr}
+          .np-auth-visual{min-height:320px}
           .np-login-shell{padding:1rem;border-radius:18px}
           .np-panel,.np-card{padding:.9rem;border-radius:16px}
           .np-hero{padding:1.1rem .9rem}
           h1{font-size:clamp(1.7rem,10vw,2.25rem)!important}
+        }
+        @media(prefers-reduced-motion:reduce) {
+          .np-landing-copy,.np-landing-visual,.np-floating-card,.np-scan-line,.np-auth-glow,.np-marquee-track,div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker){animation:none!important;transition:none!important}
         }
         </style>
         """,

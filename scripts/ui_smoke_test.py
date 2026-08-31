@@ -56,6 +56,19 @@ ADMIN_PAGES = [
 
 def main() -> None:
     initialize_database(DB_PATH)
+    landing_app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60)
+    landing_app.run()
+    landing_errors = [str(exception.value) for exception in landing_app.exception]
+    if landing_errors:
+        raise AssertionError(f"Public landing: {landing_errors}")
+    print("PUBLIC LANDING: PASS")
+    auth_app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60)
+    auth_app.session_state["entry_view"] = "auth"
+    auth_app.run()
+    auth_errors = [str(exception.value) for exception in auth_app.exception]
+    if auth_errors:
+        raise AssertionError(f"Authentication: {auth_errors}")
+    print("AUTHENTICATION: PASS")
     user = create_user("smoke_customer", hash_password("SmokePass123"), "Customer", "Smoke Customer", db_path=DB_PATH)
     dietitian = create_user(
         "smoke_dietitian", hash_password("DietitianPass123"), "Dietitian", "Smoke Dietitian",

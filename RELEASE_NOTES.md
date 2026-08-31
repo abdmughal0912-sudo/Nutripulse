@@ -1,13 +1,17 @@
-# NutriPulse AI v4.5.0 — Release Notes
+# NutriPulse AI v4.6.0 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.5.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.6.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 ## Release highlights
 
+- Luxury dark public landing page with top-right Log in and Sign up actions.
+- Animated Food Vision hero, moving capability marquee and role-aware product story.
+- Responsive dark split-screen sign-in and registration experience.
+- Accessible reduced-motion mode and mobile-specific landing/authentication layouts.
 - Persistent PostgreSQL storage for Streamlit Community Cloud accounts, plans, messages, reports and progress.
 - Automatic local SQLite fallback for Windows and isolated test databases.
 - Administrator storage-status panel that warns before accounts are created on an ephemeral cloud filesystem.

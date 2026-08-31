@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import html
 import hashlib
 import json
@@ -262,155 +263,308 @@ def render_email_verification(user: dict) -> None:
     st.stop()
 
 
+def asset_data_uri(file_name: str) -> str:
+    path = ASSET_DIR / file_name
+    try:
+        encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    except OSError:
+        return ""
+    suffix = path.suffix.lower()
+    mime_type = "image/png" if suffix == ".png" else "image/svg+xml" if suffix == ".svg" else "image/jpeg"
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def select_entry_view(view: str, default_tab: str = "Sign in") -> None:
+    st.session_state.entry_view = view
+    st.session_state.auth_default_tab = default_tab
+    if view == "landing":
+        clear_pending_login()
+
+
+def render_public_landing() -> None:
+    hero_image = asset_data_uri("nutripulse_hero.jpg")
+    nav_brand, nav_login, nav_signup = st.columns([6, 1, 1], gap="small")
+    with nav_brand:
+        st.markdown(
+            '<div class="np-landing-nav-marker"><div class="np-nav-brand"><b>NP</b>'
+            '<span><strong>NutriPulse AI</strong><small>Clinical Nutrition Intelligence</small></span></div></div>',
+            unsafe_allow_html=True,
+        )
+    with nav_login:
+        st.button(
+            "Log in", key="landing_login_top", type="tertiary", width="stretch",
+            on_click=select_entry_view, args=("auth", "Sign in"),
+        )
+    with nav_signup:
+        st.button(
+            "Sign up", key="landing_signup_top", type="primary", width="stretch",
+            on_click=select_entry_view, args=("auth", "Customer sign-up"),
+        )
+
+    hero_copy, hero_visual = st.columns([1.02, .98], gap="large")
+    with hero_copy:
+        st.markdown(
+            """
+            <section class="np-landing-copy">
+              <div class="np-landing-kicker"><i></i> PERSONAL NUTRITION · CLINICAL COLLABORATION</div>
+              <h1>Every signal.<br><em>One healthier direction.</em></h1>
+              <p>Turn meals, laboratory reports and daily habits into a clear nutrition plan—then follow every day, every alert and every completed week in one beautifully connected workspace.</p>
+            </section>
+            """,
+            unsafe_allow_html=True,
+        )
+        action_primary, action_secondary = st.columns(2, gap="small")
+        with action_primary:
+            st.markdown('<span class="np-hero-actions-marker"></span>', unsafe_allow_html=True)
+            st.button(
+                "Start free", key="landing_signup_hero", type="primary", width="stretch",
+                on_click=select_entry_view, args=("auth", "Customer sign-up"),
+            )
+        with action_secondary:
+            st.button(
+                "Explore secure login", key="landing_login_hero", width="stretch",
+                on_click=select_entry_view, args=("auth", "Sign in"),
+            )
+        st.markdown(
+            """
+            <div class="np-trust-row">
+              <span><b>76,920</b><small>audited source rows</small></span>
+              <span><b>3</b><small>separate role portals</small></span>
+              <span><b>24/7</b><small>progress visibility</small></span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with hero_visual:
+        st.markdown(
+            f"""
+            <div class="np-landing-visual" style="background-image:
+              linear-gradient(145deg,rgba(3,10,8,.05),rgba(3,10,8,.38)),url('{hero_image}')">
+              <div class="np-visual-grid"></div>
+              <div class="np-scan-line"></div>
+              <div class="np-floating-card a"><span>DAILY TARGET</span><strong>1,860 kcal</strong><small>Balanced plan · on track</small></div>
+              <div class="np-floating-card b"><span>PLAN ADHERENCE</span><strong>92%</strong><small>Week 3 · improving</small></div>
+              <div class="np-floating-card c"><span>CLINICAL SAFETY</span><strong>Safety layer active</strong></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        """
+        <div class="np-marquee" aria-label="NutriPulse capabilities">
+          <div class="np-marquee-track">
+            <span>◈ FOOD VISION</span><span>⌁ LAB INTELLIGENCE</span><span>▦ SMART DIET PLANS</span>
+            <span>↗ WEEKLY ANALYTICS</span><span>✦ DIETITIAN CARE</span><span>◆ 47,152 FOOD PROFILES</span>
+            <span>◈ FOOD VISION</span><span>⌁ LAB INTELLIGENCE</span><span>▦ SMART DIET PLANS</span>
+            <span>↗ WEEKLY ANALYTICS</span><span>✦ DIETITIAN CARE</span><span>◆ 47,152 FOOD PROFILES</span>
+          </div>
+        </div>
+        <section class="np-landing-section" id="features">
+          <div class="np-section-intro"><span>ONE CONNECTED PLATFORM</span><h2>Built around the full nutrition journey.</h2><p>Useful intelligence for customers, clinical oversight for Dietitians, and controlled governance for Administrators.</p></div>
+          <div class="np-feature-grid">
+            <article class="np-feature"><i>◉</i><small>01 · SEE</small><h3>Food Vision</h3><p>Analyze meal images, confirm the real dish and connect nutrition values to the diary.</p><b>Image → confirmation → nutrients</b></article>
+            <article class="np-feature"><i>⌁</i><small>02 · UNDERSTAND</small><h3>Lab Intelligence</h3><p>Extract report values with OCR, verify the result and apply safety-aware planning gates.</p><b>Report → verification → insight</b></article>
+            <article class="np-feature"><i>▦</i><small>03 · ACT</small><h3>Adaptive Plans</h3><p>Move through each day automatically, complete the week and retain every progress record.</p><b>Day 1 → Week 1 → next cycle</b></article>
+            <article class="np-feature"><i>✦</i><small>04 · COLLABORATE</small><h3>Clinical Care</h3><p>Give assigned Dietitians the reports, plans, notes, messages and progress they need.</p><b>Private · role-aware · connected</b></article>
+          </div>
+        </section>
+        <section class="np-landing-proof">
+          <div class="np-proof-copy"><span>PROTECTED BY DESIGN</span><h2>Personal for customers.<br>Clinical for professionals.</h2><p>Every account enters the workspace designed for its responsibilities.</p></div>
+          <div class="np-proof-stats"><div class="np-proof-stat"><b>Customer</b><span>Plans, diary, alerts and progress</span></div><div class="np-proof-stat"><b>Dietitian</b><span>Assigned caseload and clinical oversight</span></div><div class="np-proof-stat"><b>Admin</b><span>Approvals, assignments and governance</span></div><div class="np-proof-stat"><b>OTP</b><span>Gmail verification for every sign-in</span></div></div>
+        </section>
+        <div class="np-landing-footer"><span>NutriPulse AI · Clinical-safe nutrition intelligence</span><span>Decision support, not diagnosis or emergency care.</span></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_authentication() -> None:
+    auth_image = asset_data_uri("food_vision_luxury.jpg")
+    back_col, secure_col = st.columns([5, 1])
+    with back_col:
+        st.markdown(
+            '<div class="np-auth-nav"><div class="np-nav-brand"><b>NP</b><span><strong>NutriPulse AI</strong>'
+            '<small>Secure account access</small></span></div></div>',
+            unsafe_allow_html=True,
+        )
+    with secure_col:
+        st.button(
+            "← Home", key="auth_back_home", type="tertiary", width="stretch",
+            on_click=select_entry_view, args=("landing", "Sign in"),
+        )
+
+    auth_form, auth_visual = st.columns([1.05, .95], gap="small")
+    with auth_visual:
+        st.markdown(
+            f"""
+            <aside class="np-auth-visual" style="background-image:
+              linear-gradient(180deg,rgba(4,8,7,.06),rgba(4,8,7,.72)),url('{auth_image}')">
+              <div class="np-auth-glow"></div>
+              <div class="np-auth-copy"><span>PRIVATE BY ROLE</span><h2>Your health story,<br>beautifully connected.</h2><p>Secure email verification · persistent account history · separated clinical access</p></div>
+            </aside>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with auth_form:
+        st.markdown(
+            '<div class="np-auth-form-marker"><span>WELCOME TO NUTRIPULSE</span>'
+            '<h1>Secure access.<br><em>Personal direction.</em></h1>'
+            '<p>Sign in to continue, or create the account that matches your role.</p></div>',
+            unsafe_allow_html=True,
+        )
+        pending_user = st.session_state.get("pending_auth_user")
+        if pending_user:
+            render_email_verification(pending_user)
+
+        email_configuration_error = ""
+        try:
+            smtp_settings().validate()
+        except ValueError as exc:
+            email_configuration_error = str(exc)
+            st.warning(
+                "Secure email sign-in is temporarily unavailable while the Administrator "
+                "finishes the email sender configuration in Streamlit Secrets."
+            )
+        tab_names = ["Sign in", "Customer sign-up", "Dietitian application"]
+        if not has_admin():
+            tab_names.append("First admin setup")
+        requested_tab = str(st.session_state.get("auth_default_tab", "Sign in"))
+        default_tab = requested_tab if requested_tab in tab_names else "Sign in"
+        tabs = st.tabs(tab_names, default=default_tab)
+        sign_in, customer_register, dietitian_register = tabs[:3]
+        with sign_in:
+            st.caption("Use your registered account, then verify the code sent to your email.")
+            with st.form("account_login"):
+                username = st.text_input("Username", key="login_username")
+                password = st.text_input("Password", type="password", key="login_password")
+                submitted = st.form_submit_button(
+                    "Enter NutriPulse", type="primary", width="stretch",
+                    disabled=bool(email_configuration_error),
+                )
+            if submitted:
+                user, message = authenticate_with_status(username, password, record_success=False)
+                if user:
+                    clear_pending_login()
+                    st.session_state.pending_auth_user = user
+                    registered_email = str(user.get("email", "")).strip().lower()
+                    if is_valid_email_address(registered_email):
+                        try:
+                            deliver_login_code(user, registered_email)
+                        except (EmailDeliveryError, ValueError) as exc:
+                            st.session_state.otp_delivery_error = str(exc)
+                    st.rerun()
+                else:
+                    st.error(message)
+        with customer_register:
+            st.caption("Customer accounts activate immediately and open only the personal nutrition workspace.")
+            with st.form("customer_registration"):
+                a, b = st.columns(2)
+                display_name = a.text_input("Full name")
+                b.text_input("Account type", "Customer", disabled=True)
+                c, d = st.columns(2)
+                new_username = c.text_input("Choose username")
+                email = d.text_input("Email (required for verification)")
+                e, f = st.columns(2)
+                new_password = e.text_input("Choose password", type="password")
+                confirm_password = f.text_input("Confirm password", type="password")
+                create = st.form_submit_button("Create Customer account", type="primary", width="stretch")
+            if create:
+                try:
+                    if new_password != confirm_password:
+                        raise ValueError("Passwords do not match.")
+                    if not is_valid_email_address(email):
+                        raise ValueError("A valid email is required for sign-in verification.")
+                    user = register_account(new_username, new_password, "Customer", display_name, email)
+                    profile_payload = default_profile(str(user["id"]), str(user["display_name"]))
+                    upsert_profile(profile_payload)
+                    st.success("Customer account created. You can sign in now.")
+                except ValueError as exc:
+                    st.error(str(exc))
+                except Exception:
+                    st.error("Account could not be created. The username may already exist.")
+        with dietitian_register:
+            st.info("Dietitian applications stay inactive until an Administrator verifies and approves the registration.")
+            with st.form("dietitian_registration"):
+                a, b = st.columns(2)
+                dietitian_name = a.text_input("Full professional name")
+                dietitian_credential = b.text_input("Registration / license ID")
+                c, d = st.columns(2)
+                dietitian_username = c.text_input("Choose username")
+                dietitian_email = d.text_input("Professional email")
+                e, f = st.columns(2)
+                dietitian_password = e.text_input("Choose password", type="password")
+                dietitian_confirm = f.text_input("Confirm password", type="password")
+                apply = st.form_submit_button("Submit Dietitian application", type="primary", width="stretch")
+            if apply:
+                try:
+                    if dietitian_password != dietitian_confirm:
+                        raise ValueError("Passwords do not match.")
+                    if not is_valid_email_address(dietitian_email):
+                        raise ValueError("A valid professional email is required for verification.")
+                    if len(dietitian_credential.strip()) < 3:
+                        raise ValueError("A valid professional registration/license ID is required.")
+                    register_account(
+                        dietitian_username, dietitian_password, "Dietitian", dietitian_name,
+                        dietitian_email, dietitian_credential,
+                    )
+                    st.success("Application submitted. An Administrator must approve it before sign-in.")
+                except ValueError as exc:
+                    st.error(str(exc))
+                except Exception:
+                    st.error("Application could not be submitted. The username may already exist.")
+        if len(tabs) == 4:
+            with tabs[3]:
+                configured_admin_code = admin_setup_code()
+                if not configured_admin_code:
+                    st.error(
+                        "Administrator setup is disabled until NUTRIPULSE_ADMIN_SETUP_CODE "
+                        "is configured privately in the environment or Streamlit secrets."
+                    )
+                    st.caption("Never place the real setup code in source control.")
+                with st.form("first_admin_registration"):
+                    a, b = st.columns(2)
+                    admin_name = a.text_input("Administrator name")
+                    admin_email = b.text_input("Administrator email")
+                    c, d = st.columns(2)
+                    admin_username = c.text_input("Administrator username")
+                    setup_code = d.text_input("Private setup code", type="password")
+                    e, f = st.columns(2)
+                    admin_password = e.text_input("Administrator password", type="password")
+                    admin_confirm = f.text_input("Confirm administrator password", type="password")
+                    create_admin = st.form_submit_button(
+                        "Create first Administrator", type="primary", width="stretch",
+                        disabled=not configured_admin_code,
+                    )
+                if create_admin:
+                    try:
+                        if not configured_admin_code:
+                            raise ValueError("Administrator setup code is not configured.")
+                        if setup_code != configured_admin_code:
+                            raise ValueError("Invalid Administrator setup code.")
+                        if admin_password != admin_confirm:
+                            raise ValueError("Passwords do not match.")
+                        if not is_valid_email_address(admin_email):
+                            raise ValueError("A valid Administrator email is required for verification.")
+                        register_admin_account(admin_username, admin_password, admin_name, admin_email)
+                        st.success("Administrator created. Sign in to approve Dietitians and assign customers.")
+                        st.rerun()
+                    except ValueError as exc:
+                        st.error(str(exc))
+
+
 def require_login() -> dict:
     existing = st.session_state.get("current_user")
     if existing:
         return existing
-    st.markdown(
-        '<div class="np-login-shell"><div class="np-login-mark">NP</div>'
-        '<div><span>AI NUTRITION ANALYZER · FOOD VISION · DIETITIAN PLATFORM</span>'
-        '<h1>Personalized nutrition intelligence, beautifully secured.</h1>'
-        '<p>Analyze food images and laboratory reports, build personalized diet plans, track daily and weekly progress, and collaborate securely with a Dietitian.</p></div></div>',
-        unsafe_allow_html=True,
-    )
-    st.text(
-        "NutriPulse AI is an AI nutrition analyzer and Dietitian platform for food-image "
-        "analysis, personalized diet plans, laboratory report review, and nutrition progress tracking."
-    )
-    pending_user = st.session_state.get("pending_auth_user")
-    if pending_user:
-        render_email_verification(pending_user)
-    email_configuration_error = ""
-    try:
-        smtp_settings().validate()
-    except ValueError as exc:
-        email_configuration_error = str(exc)
-        st.warning(
-            "Secure email sign-in is temporarily unavailable while the Administrator "
-            "finishes the email sender configuration in Streamlit Secrets."
-        )
-    tab_names = ["Sign in", "Customer sign-up", "Dietitian application"]
-    if not has_admin():
-        tab_names.append("First admin setup")
-    tabs = st.tabs(tab_names)
-    sign_in, customer_register, dietitian_register = tabs[:3]
-    with sign_in:
-        with st.form("account_login"):
-            username = st.text_input("Username", key="login_username")
-            password = st.text_input("Password", type="password", key="login_password")
-            submitted = st.form_submit_button(
-                "Enter NutriPulse", type="primary", width="stretch",
-                disabled=bool(email_configuration_error),
-            )
-        if submitted:
-            user, message = authenticate_with_status(username, password, record_success=False)
-            if user:
-                clear_pending_login()
-                st.session_state.pending_auth_user = user
-                registered_email = str(user.get("email", "")).strip().lower()
-                if is_valid_email_address(registered_email):
-                    try:
-                        deliver_login_code(user, registered_email)
-                    except (EmailDeliveryError, ValueError) as exc:
-                        st.session_state.otp_delivery_error = str(exc)
-                st.rerun()
-            else:
-                st.error(message)
-    with customer_register:
-        st.caption("Customer accounts are activated immediately and open only the personal nutrition workspace.")
-        with st.form("customer_registration"):
-            a, b = st.columns(2)
-            display_name = a.text_input("Full name")
-            b.text_input("Account type", "Customer", disabled=True)
-            c, d = st.columns(2)
-            new_username = c.text_input("Choose username")
-            email = d.text_input("Email (required for verification)")
-            e, f = st.columns(2)
-            new_password = e.text_input("Choose password", type="password")
-            confirm_password = f.text_input("Confirm password", type="password")
-            create = st.form_submit_button("Create Customer account", type="primary", width="stretch")
-        if create:
-            try:
-                if new_password != confirm_password:
-                    raise ValueError("Passwords do not match.")
-                if not is_valid_email_address(email):
-                    raise ValueError("A valid email is required for sign-in verification.")
-                user = register_account(new_username, new_password, "Customer", display_name, email)
-                profile_payload = default_profile(str(user["id"]), str(user["display_name"]))
-                upsert_profile(profile_payload)
-                st.success("Customer account created. You can sign in now.")
-            except ValueError as exc:
-                st.error(str(exc))
-            except Exception:
-                st.error("Account could not be created. The username may already exist.")
-    with dietitian_register:
-        st.info("Dietitian applications stay inactive until an Administrator verifies and approves the registration.")
-        with st.form("dietitian_registration"):
-            a, b = st.columns(2)
-            dietitian_name = a.text_input("Full professional name")
-            dietitian_credential = b.text_input("Registration / license ID")
-            c, d = st.columns(2)
-            dietitian_username = c.text_input("Choose username")
-            dietitian_email = d.text_input("Professional email")
-            e, f = st.columns(2)
-            dietitian_password = e.text_input("Choose password", type="password")
-            dietitian_confirm = f.text_input("Confirm password", type="password")
-            apply = st.form_submit_button("Submit Dietitian application", type="primary", width="stretch")
-        if apply:
-            try:
-                if dietitian_password != dietitian_confirm:
-                    raise ValueError("Passwords do not match.")
-                if not is_valid_email_address(dietitian_email):
-                    raise ValueError("A valid professional email is required for verification.")
-                if len(dietitian_credential.strip()) < 3:
-                    raise ValueError("A valid professional registration/license ID is required.")
-                register_account(
-                    dietitian_username, dietitian_password, "Dietitian", dietitian_name,
-                    dietitian_email, dietitian_credential,
-                )
-                st.success("Application submitted. An Administrator must approve it before sign-in.")
-            except ValueError as exc:
-                st.error(str(exc))
-            except Exception:
-                st.error("Application could not be submitted. The username may already exist.")
-    if len(tabs) == 4:
-        with tabs[3]:
-            configured_admin_code = admin_setup_code()
-            if not configured_admin_code:
-                st.error(
-                    "Administrator setup is disabled until NUTRIPULSE_ADMIN_SETUP_CODE "
-                    "is configured privately in the environment or Streamlit secrets."
-                )
-                st.caption("Never place the real setup code in source control.")
-            with st.form("first_admin_registration"):
-                a, b = st.columns(2)
-                admin_name = a.text_input("Administrator name")
-                admin_email = b.text_input("Administrator email")
-                c, d = st.columns(2)
-                admin_username = c.text_input("Administrator username")
-                setup_code = d.text_input("Local setup code", type="password")
-                e, f = st.columns(2)
-                admin_password = e.text_input("Administrator password", type="password")
-                admin_confirm = f.text_input("Confirm administrator password", type="password")
-                create_admin = st.form_submit_button(
-                    "Create first Administrator", type="primary", width="stretch",
-                    disabled=not configured_admin_code,
-                )
-            if create_admin:
-                try:
-                    if not configured_admin_code:
-                        raise ValueError("Administrator setup code is not configured.")
-                    if setup_code != configured_admin_code:
-                        raise ValueError("Invalid Administrator setup code.")
-                    if admin_password != admin_confirm:
-                        raise ValueError("Passwords do not match.")
-                    if not is_valid_email_address(admin_email):
-                        raise ValueError("A valid Administrator email is required for verification.")
-                    register_admin_account(admin_username, admin_password, admin_name, admin_email)
-                    st.success("Administrator created. Sign in to approve Dietitians and assign customers.")
-                    st.rerun()
-                except ValueError as exc:
-                    st.error(str(exc))
+    if st.session_state.get("pending_auth_user"):
+        st.session_state.entry_view = "auth"
+    entry_view = str(st.session_state.get("entry_view", "landing"))
+    if entry_view == "landing":
+        render_public_landing()
+        st.stop()
+    render_authentication()
     st.stop()
 
 
