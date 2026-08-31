@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 APP_SOURCE = (ROOT / "app.py").read_text(encoding="utf-8")
 THEME_SOURCE = (ROOT / "src" / "theme.py").read_text(encoding="utf-8")
+LANDING_THEME_SOURCE = (ROOT / "src" / "landing_theme.py").read_text(encoding="utf-8")
 
 
 class FrontendEntryTests(unittest.TestCase):
@@ -28,10 +29,17 @@ class FrontendEntryTests(unittest.TestCase):
         self.assertIn("st.tabs(tab_names, default=default_tab)", APP_SOURCE)
 
     def test_theme_has_mobile_and_reduced_motion_rules(self) -> None:
-        self.assertIn("@media(max-width:720px)", THEME_SOURCE)
-        self.assertIn("@media(prefers-reduced-motion:reduce)", THEME_SOURCE)
-        self.assertIn(":has(.np-auth-form-marker)", THEME_SOURCE)
-        self.assertIn("@keyframes np-marquee", THEME_SOURCE)
+        combined_theme = THEME_SOURCE + LANDING_THEME_SOURCE
+        self.assertIn("@media(max-width:720px)", combined_theme)
+        self.assertIn("@media(prefers-reduced-motion:reduce)", combined_theme)
+        self.assertIn(":has(.np-auth-form-marker)", combined_theme)
+        self.assertIn("@keyframes np-marquee", combined_theme)
+
+    def test_cloud_theme_clears_toolbar_and_animates_coloured_wave(self) -> None:
+        self.assertIn('padding-top:4.9rem!important', LANDING_THEME_SOURCE)
+        self.assertIn('[data-testid="stMainBlockContainer"]', LANDING_THEME_SOURCE)
+        self.assertIn('.np-marquee-track span:nth-child(6n+1)', LANDING_THEME_SOURCE)
+        self.assertIn('@keyframes np-word-wave', LANDING_THEME_SOURCE)
 
 
 if __name__ == "__main__":

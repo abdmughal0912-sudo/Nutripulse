@@ -1,13 +1,15 @@
-# NutriPulse AI v4.6.0 — Release Notes
+# NutriPulse AI v4.6.1 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.6.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.6.1 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 ## Release highlights
 
+- Streamlit-toolbar-safe top navigation and fully restored landing-page layout.
+- Continuous multicolour wave advertisement for NutriPulse capabilities.
 - Luxury dark public landing page with top-right Log in and Sign up actions.
 - Animated Food Vision hero, moving capability marquee and role-aware product story.
 - Responsive dark split-screen sign-in and registration experience.

@@ -71,6 +71,7 @@ from src.email_otp import (
 from src.food_analysis import analyze_food_image
 from src.image_sources import RemoteImageError, fetch_public_image
 from src.lab_analyzer import assess_safety, classify_manual_results, extract_text_from_upload, parse_lab_text
+from src.landing_theme import apply_landing_theme
 from src.ml_engine import food_vision_status, model_status, predict_quality, train_quality_model
 from src.nutrition import (
     calculate_bmi, calculate_energy, dataset_quality, load_food_data,
@@ -91,6 +92,7 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 apply_theme()
+apply_landing_theme()
 
 
 def secret_value(name: str, default: str = "") -> str:

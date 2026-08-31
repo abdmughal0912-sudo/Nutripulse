@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.6.1 — 2026-08-31
+
+- Moved landing/auth presentation into a fresh deployment module so Streamlit Cloud reloads it reliably.
+- Added toolbar-safe top spacing to keep the navigation fully inside the application frame.
+- Upgraded the capability banner to a continuous multicolour wave animation.
+- Restored the intended Food Vision hero, floating cards, feature grid and responsive authentication layout.
+
 ## 4.6.0 — 2026-08-31
 
 - Added a public, luxury dark landing page with top-right Log in and Sign up actions.
