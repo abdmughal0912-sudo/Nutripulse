@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.9.0 — 2026-08-31
+
+- Added report-specific clinical nutrition strategies that change meal choices, macro targets, fibre targets and preparation guidance from verified laboratory findings and customer conditions.
+- Added transparent laboratory-to-plan traceability with a per-report fingerprint, value-level plan response and a visible “Why this plan is different” explanation.
+- Restored each customer’s latest verified laboratory report from persistent storage after app restart or customer switching so planning no longer silently falls back to an empty report.
+- Added clinician-only renal, electrolyte and thyroid safeguards, while retaining critical-result plan blocking and professional-review status.
+- Added distinct glucose, lipid, vitamin D, B-vitamin, blood-count, inflammation, liver, urate and lower-sodium meal adaptations plus regression coverage.
+
+
 ## 4.8.1 — 2026-08-31
 
 - Fixed Administrator and Dietitian Customer Overview so flagged conditions and allergies render as alerts without exposing Streamlit `DeltaGenerator` internals.

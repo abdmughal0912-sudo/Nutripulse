@@ -4,6 +4,7 @@ import re
 from copy import deepcopy
 from typing import Any
 
+from .clinical_planner import apply_lab_strategy, build_lab_strategy, strategy_macros
 from .lab_analyzer import assess_safety
 from .nutrition import calculate_energy, macro_targets
 
@@ -182,24 +183,27 @@ def generate_plan(profile: dict[str, Any], labs: list[dict[str, Any]] | None = N
     if not safety["can_generate"]:
         raise ValueError("Plan generation blocked: " + "; ".join(safety["reasons"]))
     energy = calculate_energy(profile)
-    macros = macro_targets(energy["target_calories"], high_protein=profile.get("goal") in {"Fat loss", "Performance"})
+    strategy = build_lab_strategy(labs, profile)
+    macros = strategy_macros(energy["target_calories"], profile, strategy)
     template_average = sum(meal[3] for meal in PAKISTANI_DAYS[0])
     scale = energy["target_calories"] / template_average
     days = []
     for day_name, day_template in zip(DAY_NAMES, PAKISTANI_DAYS):
         meals = []
         for time, name, detail, calories, protein in day_template:
-            constrained_name, constrained_detail = apply_dietary_constraints(name, detail, profile)
+            lab_name, lab_detail = apply_lab_strategy(name, detail, time, strategy)
+            constrained_name, constrained_detail = apply_dietary_constraints(lab_name, lab_detail, profile)
             meals.append({
                 "time": time,
                 "name": constrained_name,
                 "detail": constrained_detail,
                 "calories": round(calories * scale),
                 "protein_g": round(protein * scale),
+                "clinical_tags": strategy["tags"],
             })
         days.append({"day": day_name, "meals": meals})
     return {
-        "title": "Personalized cardiometabolic balance plan",
+        "title": strategy["title"],
         "calories": energy["target_calories"],
         "bmr": energy["bmr"],
         "tdee": energy["tdee"],
@@ -209,6 +213,11 @@ def generate_plan(profile: dict[str, Any], labs: list[dict[str, Any]] | None = N
         "fiber_g": macros["fiber_g"],
         "water_l": macros["water_l"],
         "focus": nutrition_focus(labs, profile),
+        "plan_adjustments": strategy["adjustments"],
+        "strategy_tags": strategy["tags"],
+        "linked_lab_summary": strategy["linked_labs"],
+        "lab_signature": strategy["lab_signature"],
+        "requires_macro_review": strategy["requires_macro_review"],
         "status": safety["level"],
         "safety_reasons": safety["reasons"],
         "dietary_constraints": list(profile.get("allergies", [])),

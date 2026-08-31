@@ -1,12 +1,18 @@
-# NutriPulse AI v4.8.1 — Release Notes
+# NutriPulse AI v4.9.0 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.8.1 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.9.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 ## Release highlights
+
+- Verified lab reports now generate genuinely different meal patterns and targets.
+- The latest saved report is restored automatically after restart or customer switching.
+- Every plan explains which values were used and how each one changed—or safely did not change—the plan.
+- Kidney, electrolyte and thyroid findings remain clinician-led; critical results still block autonomous planning.
+
 
 - OTP is required once for sign-up and for Forgot Password, not for routine login.
 - Existing Customer, Dietitian and Administrator accounts migrate as already verified.

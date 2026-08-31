@@ -144,6 +144,69 @@ class NutritionTests(unittest.TestCase):
         self.assertEqual(len(plan["days"][0]["meals"]), 4)
         self.assertEqual(plan["status"], "clinician-review")
 
+    def test_lab_findings_change_meals_targets_and_traceability(self) -> None:
+        patient = profile()
+        glucose_plan = generate_plan(patient, parse_lab_text("HbA1c 7.2"))
+        lipid_plan = generate_plan(
+            patient,
+            parse_lab_text("LDL cholesterol 178 Triglycerides 210"),
+        )
+        vitamin_plan = generate_plan(patient, parse_lab_text("Vitamin D 14"))
+
+        self.assertNotEqual(glucose_plan["title"], lipid_plan["title"])
+        self.assertNotEqual(lipid_plan["title"], vitamin_plan["title"])
+        self.assertNotEqual(
+            glucose_plan["lab_signature"], lipid_plan["lab_signature"],
+        )
+        self.assertLess(glucose_plan["carbs_g"], lipid_plan["carbs_g"])
+        self.assertGreaterEqual(lipid_plan["fiber_g"], 38)
+
+        glucose_meals = " ".join(
+            meal["name"] + " " + meal["detail"]
+            for day in glucose_plan["days"] for meal in day["meals"]
+        )
+        lipid_meals = " ".join(
+            meal["name"] + " " + meal["detail"]
+            for day in lipid_plan["days"] for meal in day["meals"]
+        )
+        vitamin_meals = " ".join(
+            meal["name"] + " " + meal["detail"]
+            for day in vitamin_plan["days"] for meal in day["meals"]
+        )
+        self.assertNotEqual(glucose_meals, lipid_meals)
+        self.assertNotEqual(lipid_meals, vitamin_meals)
+        self.assertEqual(
+            glucose_plan["linked_lab_summary"][0]["test"], "HbA1c",
+        )
+        self.assertIn(
+            "plan_response", glucose_plan["linked_lab_summary"][0],
+        )
+
+    def test_normal_lipid_values_use_maintenance_not_restriction(self) -> None:
+        plan = generate_plan(
+            profile(),
+            parse_lab_text(
+                "LDL cholesterol 81 HDL cholesterol 45 Total cholesterol 156"
+            ),
+        )
+        self.assertIn("lipid-maintenance", plan["strategy_tags"])
+        self.assertEqual(plan["status"], "wellness")
+        self.assertTrue(
+            all(row["flag"] == "normal" for row in plan["linked_lab_summary"])
+        )
+
+    def test_noncritical_kidney_findings_remain_clinician_led(self) -> None:
+        plan = generate_plan(
+            profile(),
+            parse_lab_text("eGFR 45 Creatinine 1.6 Potassium 4.4"),
+        )
+        self.assertTrue(plan["requires_macro_review"])
+        self.assertIn("kidney-clinician-review", plan["strategy_tags"])
+        response = " ".join(
+            row["plan_response"] for row in plan["linked_lab_summary"]
+        ).lower()
+        self.assertIn("no autonomous renal restriction", response)
+
     def test_invalid_manual_lab_value_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             classify_manual_results([{"test": "Potassium", "value": -1}])

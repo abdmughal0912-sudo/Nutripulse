@@ -59,6 +59,16 @@ class FrontendEntryTests(unittest.TestCase):
         self.assertIn(':has(.np-auth-card-marker)', PORTAL_THEME_SOURCE)
         self.assertIn('[data-testid="stColumn"]', PORTAL_THEME_SOURCE)
 
+    def test_latest_verified_lab_report_is_restored_for_planning(self) -> None:
+        for marker in (
+            "reports = list_lab_reports(active_profile_id)",
+            'latest_lab_values = latest_report["values"]',
+            "assess_safety(latest_lab_values, saved)",
+            "Why this plan is different",
+            "How the plan responded",
+        ):
+            self.assertIn(marker, APP_SOURCE)
+
     def test_clinical_flags_do_not_render_streamlit_component_objects(self) -> None:
         self.assertNotIn(
             'st.warning(" · ".join(conditions)) if conditions else st.success',

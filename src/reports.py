@@ -79,6 +79,41 @@ def plan_to_pdf(plan: dict[str, Any], patient_name: str) -> bytes:
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.extend([summary_table, Spacer(1, 4 * mm)])
+    story.append(Paragraph(escape(str(plan.get("title", "Personalized nutrition plan"))), styles["NPHeading"]))
+    if plan.get("plan_adjustments"):
+        story.append(Paragraph(
+            escape(" • ".join(map(str, plan["plan_adjustments"]))),
+            styles["NPBody"],
+        ))
+        story.append(Spacer(1, 3 * mm))
+    if plan.get("linked_lab_summary"):
+        story.append(Paragraph("Verified laboratory inputs", styles["NPHeading"]))
+        lab_data = [["Test", "Value", "Flag", "Plan response"]]
+        lab_data.extend([
+            [
+                escape(str(row.get("test", ""))),
+                escape(f"{row.get('value', '')} {row.get('unit', '')}".strip()),
+                escape(str(row.get("flag", ""))),
+                escape(str(row.get("plan_response", ""))),
+            ]
+            for row in plan["linked_lab_summary"]
+        ])
+        lab_table = Table(
+            lab_data,
+            colWidths=[35 * mm, 28 * mm, 20 * mm, 86 * mm],
+            repeatRows=1,
+        )
+        lab_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#16423C")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 7),
+            ("GRID", (0, 0), (-1, -1), .35, colors.HexColor("#C9D7D3")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.extend([lab_table, Spacer(1, 3 * mm)])
     story.append(Paragraph("Nutrition focus", styles["NPHeading"]))
     story.append(Paragraph(escape(" • ".join(map(str, plan["focus"]))), styles["NPBody"]))
     story.append(Spacer(1, 3 * mm))

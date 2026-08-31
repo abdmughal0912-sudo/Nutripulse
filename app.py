@@ -773,13 +773,19 @@ def session_setup() -> None:
         upsert_profile(saved)
         plans = list_plans(active_profile_id)
         latest_plan = plans[0] if plans else None
+        reports = list_lab_reports(active_profile_id)
+        latest_report = reports[0] if reports else None
+        latest_lab_values = latest_report["values"] if latest_report else []
         st.session_state.profile = saved
         st.session_state.plan = latest_plan["plan"] if latest_plan else None
         st.session_state.plan_id = latest_plan["id"] if latest_plan else None
-        st.session_state.lab_results = []
-        st.session_state.lab_safety = {"level": "wellness", "reasons": [], "can_generate": True}
-        st.session_state.lab_verified = False
-        st.session_state.lab_report_id = None
+        st.session_state.lab_results = latest_lab_values
+        st.session_state.lab_safety = (
+            assess_safety(latest_lab_values, saved)
+            if latest_report else {"level": "wellness", "reasons": [], "can_generate": True}
+        )
+        st.session_state.lab_verified = bool(latest_report)
+        st.session_state.lab_report_id = latest_report["id"] if latest_report else None
         st.session_state.lab_editor_revision = 0
         st.session_state.vision_confirmed_dish_name = ""
         st.session_state.plan_active_date_requested = None
@@ -1427,6 +1433,20 @@ def render_labs(*, clinical_mode: bool = False) -> None:
 def render_plan() -> None:
     hero("Constraint-based recommendation engine", "A seven-day plan<br><em>built around your real life.</em>", "Energy, laboratory signals, conditions, allergies, cuisine and food-quality rules are considered together.")
     safety = st.session_state.lab_safety
+    if st.session_state.lab_verified and st.session_state.lab_results:
+        abnormal_count = sum(
+            str(row.get("flag", "")).lower() in {"high", "low", "critical"}
+            for row in st.session_state.lab_results
+        )
+        st.info(
+            f"Using {len(st.session_state.lab_results)} verified values from the latest "
+            f"saved laboratory report ({abnormal_count} outside the configured range)."
+        )
+    elif st.session_state.lab_results:
+        st.warning(
+            "Laboratory values are present but not verified. Confirm them in "
+            "Laboratory Intelligence before planning."
+        )
     c1, c2 = st.columns([1, 1])
     generate_disabled = not safety.get("can_generate", True)
     if c1.button("Generate personalized full diet plan", type="primary", disabled=generate_disabled, width="stretch"):
@@ -1456,6 +1476,12 @@ def render_plan() -> None:
     if not plan:
         st.markdown('<div class="np-panel"><h3>No plan generated yet</h3><p>Complete your profile, verify relevant laboratory values, then generate a transparent seven-day draft.</p></div>', unsafe_allow_html=True)
         return
+    st.subheader(str(plan.get("title", "Personalized nutrition plan")))
+    if st.session_state.lab_verified and not plan.get("linked_lab_summary"):
+        st.warning(
+            "This saved plan was created before laboratory-linked meal adaptation. "
+            "Generate a new personalized plan to apply the latest verified report."
+        )
     a, b, c, d, e, f = st.columns(6)
     a.metric("Energy", f"{plan['calories']} kcal")
     b.metric("Protein", f"{plan['protein_g']} g")
@@ -1466,6 +1492,28 @@ def render_plan() -> None:
     status_text = "Professional review required" if plan["status"] == "clinician-review" else "General wellness plan"
     st.markdown(f'<span class="np-badge"><i class="np-dot"></i>{status_text}</span>', unsafe_allow_html=True)
     st.write("**Plan focus:** " + " · ".join(plan["focus"]))
+    linked_labs = plan.get("linked_lab_summary", [])
+    adjustments = plan.get("plan_adjustments", [])
+    if linked_labs or adjustments:
+        with st.expander("Why this plan is different", expanded=True):
+            if adjustments:
+                st.markdown("\n".join(f"- {item}" for item in adjustments))
+            if linked_labs:
+                st.caption(
+                    f"Verified laboratory fingerprint: {plan.get('lab_signature', 'linked')} · "
+                    "Normal values are retained without unnecessary restriction."
+                )
+                lab_frame = pd.DataFrame(linked_labs).rename(columns={
+                    "test": "Test", "value": "Value", "unit": "Unit",
+                    "reference": "Reference", "flag": "Flag",
+                    "plan_response": "How the plan responded",
+                })
+                st.dataframe(lab_frame, width="stretch", hide_index=True)
+            if plan.get("requires_macro_review"):
+                st.warning(
+                    "Kidney or electrolyte findings are present. Macro targets are provisional "
+                    "and therapeutic renal/electrolyte changes require a qualified clinician."
+                )
     if plan.get("dietary_constraints"):
         st.warning(plan["cross_contact_notice"])
     notice = st.session_state.pop("schedule_transition_notice", None)
