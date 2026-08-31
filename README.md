@@ -2,7 +2,7 @@
   <img src="assets/nutripulse_hero.jpg" alt="NutriPulse AI nutrition intelligence platform" width="100%">
 </p>
 
-<h1 align="center">NutriPulse AI v4.7.1</h1>
+<h1 align="center">NutriPulse AI v4.8.0</h1>
 
 <p align="center">
   <strong>AI-assisted nutrition intelligence, clinical collaboration and longitudinal diet-plan monitoring.</strong>
@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/Streamlit-Application-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit application">
   <img src="https://img.shields.io/badge/FastAPI-REST_API-009688?logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Release-v4.7.1-6A5ACD" alt="Release v4.7.1">
+  <img src="https://img.shields.io/badge/Release-v4.8.0-6A5ACD" alt="Release v4.8.0">
   <img src="https://img.shields.io/badge/Source_rows-76%2C920-16423C" alt="76,920 audited source rows">
 </p>
 
@@ -21,14 +21,14 @@
     <img src="https://img.shields.io/badge/Open-Live_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Open the NutriPulse AI live app">
   </a>
   <a href="https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip">
-    <img src="https://img.shields.io/badge/Download-NutriPulse_v4.7.1-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.7.1">
+    <img src="https://img.shields.io/badge/Download-NutriPulse_v4.8.0-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.8.0">
   </a>
   <a href="RELEASE_NOTES.md">
     <img src="https://img.shields.io/badge/View-Release_Notes-1F6FEB?style=for-the-badge" alt="View release notes">
   </a>
 </p>
 
-NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, persistent PostgreSQL or local SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.7.1 adds a compact centered authentication board, verified Gmail password recovery, readable pastel-accented role portals and animated star-wave backgrounds while preserving reboot-safe cloud accounts, automatic day/week progression, analytics and separated Customer, Dietitian and Administrator workspaces. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
+NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, persistent PostgreSQL or local SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.8.0 uses one-time email verification during sign-up, keeps verified logins password-only, retains secure Gmail password recovery, and fits the complete interface across mobile, laptop and desktop screens. It preserves reboot-safe cloud accounts, automatic day/week progression, analytics and separated Customer, Dietitian and Administrator workspaces. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
 
 **Live application:** [NutriPulse AI — Nutrition Analyzer & Dietitian Platform](https://nutripulse-ai.streamlit.app/)
 
@@ -58,7 +58,7 @@ NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, p
 
 GitHub generates a clean ZIP package directly from the secured <code>main</code> branch:
 
-**[Download NutriPulse AI v4.7.1](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download NutriPulse AI v4.8.0](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 The package includes the application, API, audited public data indexes, portable classifier, Food Vision model, launchers, documentation and tests. It excludes passwords, API keys, runtime databases, Customer records, <code>.env</code>, Streamlit secrets and the private person-level row registry.
 
@@ -72,9 +72,9 @@ The package includes the application, API, audited public data indexes, portable
 
 Before starting, create a long private value for `NUTRIPULSE_ADMIN_SETUP_CODE` in your environment or `.streamlit/secrets.toml`. Administrator registration remains disabled when the value is missing. Never commit the real value. If startup fails, open `NUTRIPULSE_STARTUP_LOG.txt` inside `NutriPulse_App` for the exact diagnostic.
 
-## Email verification at sign-in
+## Email verification at sign-up
 
-After the password is accepted, every Customer, Dietitian and Administrator must enter a six-digit code delivered to the account's registered email. New registrations require a valid email; older accounts without one complete a one-time verified-email enrollment.
+Every new Customer, Dietitian and Administrator verifies a six-digit code once during account creation. After verification, normal login uses only the username and password. Forgot Password continues to require a separate recovery code. Existing accounts are preserved as verified during the database migration.
 
 For Gmail, use a dedicated sending account with Google 2-Step Verification and a Google App Password. Add the following privately in Streamlit **App settings → Secrets**:
 

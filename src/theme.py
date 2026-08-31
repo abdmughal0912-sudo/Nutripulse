@@ -15,7 +15,12 @@ def apply_theme() -> None:
           --np-cyan:#55e4d2; --np-violet:#b49aff; --np-orange:#ffb86b;
           --np-gold:#d8b35b; --np-champagne:#f3dfad; --np-danger:#ff6476;
         }
+        *,*::before,*::after{box-sizing:border-box}
         html,body,[class*="css"] { font-family:Inter,"Segoe UI",sans-serif; }
+        html,body,.stApp,[data-testid="stAppViewContainer"]{width:100%;max-width:100vw;overflow-x:clip}
+        [data-testid="stMainBlockContainer"],.block-container{width:100%;min-width:0}
+        [data-testid="stHorizontalBlock"],
+        :is([data-testid="column"],[data-testid="stColumn"]){min-width:0!important;max-width:100%}
         .stApp { background:
           radial-gradient(circle at 82% -10%,rgba(85,228,210,.13),transparent 30%),
           radial-gradient(circle at 15% 22%,rgba(216,179,91,.07),transparent 28%),
@@ -247,8 +252,8 @@ def apply_theme() -> None:
         .np-proof-stat span { color:var(--np-muted); font-size:.65rem; }
         .np-landing-footer { margin-top:2rem; padding:2rem 0; border-top:1px solid var(--np-line); color:#657a73; font-size:.68rem; text-align:center; }
         div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker) { min-height:720px; align-items:stretch; gap:0!important; overflow:hidden; border:1px solid var(--np-line-gold); border-radius:30px; background:rgba(5,13,10,.9); box-shadow:0 45px 140px rgba(0,0,0,.43); animation:np-rise .65s ease-out both; }
-        div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div[data-testid="column"]:first-child { padding:2.2rem 2.4rem; max-height:820px; overflow:auto; }
-        div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div[data-testid="column"]:last-child { min-height:720px; }
+        div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div:is([data-testid="column"],[data-testid="stColumn"]):first-child { padding:2.2rem 2.4rem; max-height:820px; overflow:auto; }
+        div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div:is([data-testid="column"],[data-testid="stColumn"]):last-child { min-height:720px; }
         .np-auth-form-marker { display:block; margin:1rem 0 1.2rem; }
         .np-auth-form-marker span { color:var(--np-gold); font-size:.58rem; font-weight:900; letter-spacing:.18em; text-transform:uppercase; }
         .np-auth-form-marker h1 { color:#fff; margin:.35rem 0 .45rem; font-size:clamp(2rem,4vw,3.2rem)!important; }
@@ -284,7 +289,11 @@ def apply_theme() -> None:
         .np-meal-skipped { opacity:.58; border-left:3px solid var(--np-orange); padding-left:.65rem; }
         @keyframes np-pulse { 0%,100%{opacity:.55;transform:scale(.88)} 50%{opacity:1;transform:scale(1.15)} }
         hr { border-color:var(--np-line); }
-        [data-testid="column"] { min-width:0!important; }
+        :is([data-testid="column"],[data-testid="stColumn"]) { min-width:0!important; }
+        @media(max-width:1200px) {
+          .block-container{padding-left:clamp(.9rem,2.2vw,1.65rem);padding-right:clamp(.9rem,2.2vw,1.65rem)}
+          .np-hero{padding:1.65rem 1.35rem}
+        }
         @media(max-width:900px) {
           .np-command-status span:nth-child(n+2){display:none}
           .np-command-bar{align-items:flex-start}
@@ -298,10 +307,10 @@ def apply_theme() -> None:
           .block-container{padding:.8rem .75rem 3rem;max-width:100vw}
           [data-testid="stSidebar"]{width:min(86vw,320px)!important}
           div[data-testid="stHorizontalBlock"]{flex-wrap:wrap!important;gap:.65rem!important}
-          div[data-testid="column"]{width:100%!important;flex:1 1 100%!important;min-width:0!important}
+          div:is([data-testid="column"],[data-testid="stColumn"]){width:100%!important;flex:1 1 100%!important;min-width:0!important}
           div[data-testid="stHorizontalBlock"]:has(.np-landing-nav-marker),div[data-testid="stHorizontalBlock"]:has(.np-auth-nav){flex-wrap:nowrap!important;gap:.35rem!important;margin-bottom:.8rem}
-          div[data-testid="stHorizontalBlock"]:has(.np-landing-nav-marker)>div[data-testid="column"],div[data-testid="stHorizontalBlock"]:has(.np-auth-nav)>div[data-testid="column"]{width:auto!important;flex:0 1 auto!important}
-          div[data-testid="stHorizontalBlock"]:has(.np-landing-nav-marker)>div[data-testid="column"]:first-child,div[data-testid="stHorizontalBlock"]:has(.np-auth-nav)>div[data-testid="column"]:first-child{flex:1 1 auto!important}
+          div[data-testid="stHorizontalBlock"]:has(.np-landing-nav-marker)>div:is([data-testid="column"],[data-testid="stColumn"]),div[data-testid="stHorizontalBlock"]:has(.np-auth-nav)>div:is([data-testid="column"],[data-testid="stColumn"]){width:auto!important;flex:0 1 auto!important}
+          div[data-testid="stHorizontalBlock"]:has(.np-landing-nav-marker)>div:is([data-testid="column"],[data-testid="stColumn"]):first-child,div[data-testid="stHorizontalBlock"]:has(.np-auth-nav)>div:is([data-testid="column"],[data-testid="stColumn"]):first-child{flex:1 1 auto!important}
           .np-nav-brand small{display:none}
           .np-landing-copy{padding:2.2rem 0 1.25rem}
           .np-landing-copy h1{font-size:clamp(2.8rem,15vw,4.4rem)!important}
@@ -314,9 +323,9 @@ def apply_theme() -> None:
           .np-feature{min-height:0}
           .np-proof-copy,.np-proof-stats{padding:1.25rem;border-radius:20px}
           div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker){min-height:0;border-radius:22px;flex-direction:column!important}
-          div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div[data-testid="column"]{width:100%!important;flex:1 1 100%!important}
-          div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div[data-testid="column"]:first-child{padding:1.25rem;max-height:none;order:1}
-          div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div[data-testid="column"]:last-child{min-height:360px;order:2}
+          div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div:is([data-testid="column"],[data-testid="stColumn"]){width:100%!important;flex:1 1 100%!important}
+          div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div:is([data-testid="column"],[data-testid="stColumn"]):first-child{padding:1.25rem;max-height:none;order:1}
+          div[data-testid="stHorizontalBlock"]:has(.np-auth-form-marker)>div:is([data-testid="column"],[data-testid="stColumn"]):last-child{min-height:360px;order:2}
           .np-auth-visual{min-height:360px;padding:1.4rem}
           .np-auth-glow{width:180px;height:180px}
           .np-auth-copy h2{font-size:2.1rem}
@@ -339,6 +348,7 @@ def apply_theme() -> None:
           div[data-testid="stMetricValue"]{font-size:1.45rem}
           div[data-testid="stDataFrame"],div[data-testid="stTable"]{max-width:calc(100vw - 1.5rem);overflow-x:auto}
           div[data-testid="stPlotlyChart"],div[data-testid="stImage"],img,iframe{max-width:100%!important}
+          .stForm,.stForm>div,[data-testid="stForm"],form{max-width:100%!important;min-width:0!important}
           .stTextInput input,.stNumberInput input,.stTextArea textarea{font-size:16px!important}
         }
         @media(max-width:420px) {

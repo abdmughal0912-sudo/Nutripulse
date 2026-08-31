@@ -20,15 +20,18 @@ class FrontendEntryTests(unittest.TestCase):
         ):
             self.assertIn(marker, APP_SOURCE)
 
-    def test_authentication_preserves_all_role_flows_and_email_otp(self) -> None:
+    def test_authentication_uses_otp_only_for_signup_and_recovery(self) -> None:
         for marker in (
             "np-auth-card-marker", "np-auth-starfield", "Customer sign-up",
             "Dietitian application", "First admin setup", "Private setup code",
-            "render_email_verification", "pending_auth_user", "Forgot password?",
-            "render_password_reset", "send_password_reset_code",
+            "render_signup_verification", "pending_signup_user", "Forgot password?",
+            "render_password_reset", "send_password_reset_code", "send_signup_code",
+            "OTP is required only for sign-up and password recovery",
         ):
             self.assertIn(marker, APP_SOURCE)
         self.assertIn("st.tabs(tab_names, default=default_tab)", APP_SOURCE)
+        self.assertNotIn("deliver_login_code", APP_SOURCE)
+        self.assertNotIn("pending_auth_user", APP_SOURCE)
 
     def test_theme_has_mobile_and_reduced_motion_rules(self) -> None:
         combined_theme = THEME_SOURCE + LANDING_THEME_SOURCE
@@ -36,6 +39,8 @@ class FrontendEntryTests(unittest.TestCase):
         self.assertIn("@media(prefers-reduced-motion:reduce)", combined_theme)
         self.assertIn(":has(.np-auth-form-marker)", combined_theme)
         self.assertIn("@keyframes np-marquee", combined_theme)
+        self.assertIn('[data-testid="stColumn"]', combined_theme)
+        self.assertIn('max-width:100vw', THEME_SOURCE)
 
     def test_cloud_theme_clears_toolbar_and_animates_coloured_wave(self) -> None:
         self.assertIn('padding-top:4.9rem!important', LANDING_THEME_SOURCE)

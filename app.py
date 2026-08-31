@@ -68,7 +68,7 @@ from src.database import (
 from src.diet_engine import generate_plan, grocery_list
 from src.email_otp import (
     EmailDeliveryError, SmtpSettings, create_login_challenge, is_valid_email_address,
-    mask_email, resend_wait_seconds, send_login_code, send_password_reset_code,
+    mask_email, resend_wait_seconds, send_password_reset_code, send_signup_code,
     verify_login_code,
 )
 from src.food_analysis import analyze_food_image
@@ -159,8 +159,8 @@ def default_profile(profile_id: str, name: str) -> dict:
     }
 
 
-PENDING_LOGIN_KEYS = (
-    "pending_auth_user", "pending_login_email", "login_otp", "otp_delivery_error",
+PENDING_SIGNUP_KEYS = (
+    "pending_signup_user", "pending_signup_email", "signup_otp", "signup_delivery_error",
 )
 PASSWORD_RESET_KEYS = (
     "password_reset_active", "password_reset_user", "password_reset_email",
@@ -168,8 +168,8 @@ PASSWORD_RESET_KEYS = (
 )
 
 
-def clear_pending_login() -> None:
-    for key in PENDING_LOGIN_KEYS:
+def clear_pending_signup() -> None:
+    for key in PENDING_SIGNUP_KEYS:
         st.session_state.pop(key, None)
 
 
@@ -180,19 +180,23 @@ def clear_password_reset(*, keep_notice: bool = False) -> None:
         st.session_state.pop("password_reset_notice", None)
 
 
-def deliver_login_code(user: dict, email: str) -> None:
+def deliver_signup_code(user: dict, email: str) -> None:
     allowed, wait_seconds = reserve_email_otp_delivery(str(user["id"]))
     if not allowed:
         if wait_seconds >= 60:
-            raise ValueError("Too many verification emails were requested. Try again later.")
+            raise ValueError("Too many sign-up verification emails were requested. Try again later.")
         raise ValueError(f"Wait {wait_seconds} seconds before requesting another code.")
     challenge, code = create_login_challenge(str(user["id"]), email)
-    send_login_code(
+    challenge["purpose"] = "sign-up"
+    send_signup_code(
         smtp_settings(), email, str(user.get("display_name", "NutriPulse user")), code,
     )
-    st.session_state.pending_login_email = email.strip().lower()
-    st.session_state.login_otp = challenge
-    st.session_state.pop("otp_delivery_error", None)
+    st.session_state.pending_signup_user = {
+        key: value for key, value in user.items() if key != "password_hash"
+    }
+    st.session_state.pending_signup_email = email.strip().lower()
+    st.session_state.signup_otp = challenge
+    st.session_state.pop("signup_delivery_error", None)
 
 
 def deliver_password_reset_code(user: dict) -> None:
@@ -299,67 +303,57 @@ def render_password_reset() -> None:
         st.rerun()
 
 
-def render_email_verification(user: dict) -> None:
-    st.subheader("Verify your email")
+def render_signup_verification(user: dict) -> None:
+    st.subheader("Verify your new account")
     st.caption(
-        "Your password was accepted. Enter the six-digit email code before NutriPulse opens your portal."
+        "Enter the six-digit code once to complete sign-up. Future logins use only your username and password."
     )
     stored_email = str(user.get("email", "")).strip().lower()
-    challenge = st.session_state.get("login_otp")
-    pending_email = str(st.session_state.get("pending_login_email", "")).strip().lower()
-    delivery_error = str(st.session_state.get("otp_delivery_error", "")).strip()
+    challenge = st.session_state.get("signup_otp")
+    destination = str(
+        st.session_state.get("pending_signup_email", stored_email)
+    ).strip().lower()
+    delivery_error = str(st.session_state.get("signup_delivery_error", "")).strip()
     if delivery_error:
         st.error(delivery_error)
 
-    if not challenge:
-        if is_valid_email_address(stored_email):
-            st.info(f"Send a verification code to {mask_email(stored_email)}.")
-            if st.button("Send verification code", type="primary", width="stretch"):
-                try:
-                    deliver_login_code(user, stored_email)
-                    st.rerun()
-                except (EmailDeliveryError, ValueError) as exc:
-                    st.session_state.otp_delivery_error = str(exc)
-                    st.rerun()
-        else:
-            st.info(
-                "This existing account does not yet have a verified email. Add one now; "
-                "it will be saved only after the code is verified."
-            )
-            with st.form("verified_email_enrollment"):
-                enrollment_email = st.text_input("Email address", placeholder="name@gmail.com")
-                send_enrollment = st.form_submit_button(
-                    "Send verification code", type="primary", width="stretch",
-                )
-            if send_enrollment:
-                try:
-                    if not is_valid_email_address(enrollment_email):
-                        raise ValueError("Enter a valid email address.")
-                    deliver_login_code(user, enrollment_email)
-                    st.rerun()
-                except (EmailDeliveryError, ValueError) as exc:
-                    st.session_state.otp_delivery_error = str(exc)
-                    st.rerun()
+    if not is_valid_email_address(destination):
+        st.error("This registration does not have a valid verification email. Contact the Administrator.")
+    elif not challenge:
+        st.info(f"Send the sign-up verification code to {mask_email(destination)}.")
+        if st.button("Send sign-up verification code", type="primary", width="stretch"):
+            try:
+                deliver_signup_code(user, destination)
+                st.rerun()
+            except (EmailDeliveryError, ValueError) as exc:
+                st.session_state.signup_delivery_error = str(exc)
+                st.rerun()
     else:
-        destination = pending_email or str(challenge.get("email", ""))
-        st.success(f"Verification code sent to {mask_email(destination)}.")
-        with st.form("login_email_verification"):
+        st.success(f"Sign-up verification code sent to {mask_email(destination)}.")
+        with st.form("signup_email_verification"):
             code = st.text_input(
-                "Six-digit verification code", max_chars=6, placeholder="000000",
+                "Six-digit sign-up code", max_chars=6, placeholder="000000",
             )
-            verify = st.form_submit_button("Verify and sign in", type="primary", width="stretch")
+            verify = st.form_submit_button(
+                "Verify account", type="primary", width="stretch",
+            )
         if verify:
             verified, message = verify_login_code(challenge, str(user["id"]), code)
             if verified:
-                if not is_valid_email_address(stored_email):
-                    if not set_verified_user_email(str(user["id"]), destination):
-                        st.error("The verified email could not be saved. Contact the Administrator.")
-                        st.stop()
-                    user["email"] = destination
-                record_login(str(user["id"]))
-                clear_pending_login()
-                st.session_state.current_user = user
-                st.success("Email verified. Opening your secure portal…")
+                if not set_verified_user_email(str(user["id"]), destination):
+                    st.error("The verified email could not be saved. Contact the Administrator.")
+                    st.stop()
+                role = str(user.get("role", "Customer"))
+                is_admin_account = bool(int(user.get("is_admin", 0)))
+                clear_pending_signup()
+                if role == "Dietitian" and not is_admin_account:
+                    st.session_state.signup_verification_notice = (
+                        "Email verified. Your Dietitian application is awaiting Administrator approval."
+                    )
+                else:
+                    st.session_state.signup_verification_notice = (
+                        "Account verified. You can now sign in with your username and password."
+                    )
                 st.rerun()
             else:
                 st.error(message)
@@ -368,19 +362,19 @@ def render_email_verification(user: dict) -> None:
         resend_col, cancel_col = st.columns(2)
         resend_label = "Resend code" if wait_seconds == 0 else f"Resend in {wait_seconds}s"
         if resend_col.button(
-            resend_label, disabled=wait_seconds > 0, width="stretch", key="resend_login_otp",
+            resend_label, disabled=wait_seconds > 0, width="stretch", key="resend_signup_otp",
         ):
             try:
-                deliver_login_code(user, destination)
+                deliver_signup_code(user, destination)
                 st.rerun()
             except (EmailDeliveryError, ValueError) as exc:
-                st.session_state.otp_delivery_error = str(exc)
+                st.session_state.signup_delivery_error = str(exc)
                 st.rerun()
-        if cancel_col.button("Cancel sign-in", width="stretch", key="cancel_login_otp"):
-            clear_pending_login()
+        if cancel_col.button("Finish later", width="stretch", key="cancel_signup_otp"):
+            clear_pending_signup()
             st.rerun()
-    if st.button("Use another account", width="stretch", key="cancel_pending_account"):
-        clear_pending_login()
+    if st.button("← Back to sign in", width="stretch", key="cancel_pending_signup"):
+        clear_pending_signup()
         st.rerun()
     st.stop()
 
@@ -400,7 +394,7 @@ def select_entry_view(view: str, default_tab: str = "Sign in") -> None:
     st.session_state.entry_view = view
     st.session_state.auth_default_tab = default_tab
     if view == "landing":
-        clear_pending_login()
+        clear_pending_signup()
         clear_password_reset()
 
 
@@ -494,7 +488,7 @@ def render_public_landing() -> None:
         </section>
         <section class="np-landing-proof">
           <div class="np-proof-copy"><span>PROTECTED BY DESIGN</span><h2>Personal for customers.<br>Clinical for professionals.</h2><p>Every account enters the workspace designed for its responsibilities.</p></div>
-          <div class="np-proof-stats"><div class="np-proof-stat"><b>Customer</b><span>Plans, diary, alerts and progress</span></div><div class="np-proof-stat"><b>Dietitian</b><span>Assigned caseload and clinical oversight</span></div><div class="np-proof-stat"><b>Admin</b><span>Approvals, assignments and governance</span></div><div class="np-proof-stat"><b>OTP</b><span>Gmail verification for every sign-in</span></div></div>
+          <div class="np-proof-stats"><div class="np-proof-stat"><b>Customer</b><span>Plans, diary, alerts and progress</span></div><div class="np-proof-stat"><b>Dietitian</b><span>Assigned caseload and clinical oversight</span></div><div class="np-proof-stat"><b>Admin</b><span>Approvals, assignments and governance</span></div><div class="np-proof-stat"><b>OTP</b><span>One-time sign-up and recovery verification</span></div></div>
         </section>
         <div class="np-landing-footer"><span>NutriPulse AI · Clinical-safe nutrition intelligence</span><span>Decision support, not diagnosis or emergency care.</span></div>
         """,
@@ -528,9 +522,9 @@ def render_authentication() -> None:
             '<p>Sign in, create an account, or recover your password from one protected board.</p></div>',
             unsafe_allow_html=True,
         )
-        pending_user = st.session_state.get("pending_auth_user")
+        pending_user = st.session_state.get("pending_signup_user")
         if pending_user:
-            render_email_verification(pending_user)
+            render_signup_verification(pending_user)
 
         email_configuration_error = ""
         try:
@@ -538,9 +532,13 @@ def render_authentication() -> None:
         except ValueError as exc:
             email_configuration_error = str(exc)
             st.warning(
-                "Secure email sign-in is temporarily unavailable while the Administrator "
-                "finishes the email sender configuration in Streamlit Secrets."
+                "New-account verification and password recovery are temporarily unavailable "
+                "while the Administrator finishes the email sender configuration. Existing "
+                "verified accounts can still sign in normally."
             )
+        signup_notice = str(st.session_state.pop("signup_verification_notice", "")).strip()
+        if signup_notice:
+            st.success(signup_notice)
         tab_names = ["Sign in", "Customer sign-up", "Dietitian application"]
         if not has_admin():
             tab_names.append("First admin setup")
@@ -556,25 +554,30 @@ def render_authentication() -> None:
             if st.session_state.get("password_reset_active"):
                 render_password_reset()
             else:
-                st.caption("Use your registered account, then verify the code sent to your email.")
+                st.caption(
+                    "Use your username and password. OTP is required only for sign-up and password recovery."
+                )
                 with st.form("account_login"):
                     username = st.text_input("Username", key="login_username")
                     password = st.text_input("Password", type="password", key="login_password")
                     submitted = st.form_submit_button(
                         "Enter NutriPulse", type="primary", width="stretch",
-                        disabled=bool(email_configuration_error),
                     )
                 if submitted:
-                    user, message = authenticate_with_status(username, password, record_success=False)
+                    user, message = authenticate_with_status(username, password)
                     if user:
-                        clear_pending_login()
-                        st.session_state.pending_auth_user = user
-                        registered_email = str(user.get("email", "")).strip().lower()
-                        if is_valid_email_address(registered_email):
+                        if "verification required" in message.lower():
+                            clear_pending_signup()
+                            st.session_state.pending_signup_user = user
+                            registered_email = str(user.get("email", "")).strip().lower()
+                            st.session_state.pending_signup_email = registered_email
                             try:
-                                deliver_login_code(user, registered_email)
+                                deliver_signup_code(user, registered_email)
                             except (EmailDeliveryError, ValueError) as exc:
-                                st.session_state.otp_delivery_error = str(exc)
+                                st.session_state.signup_delivery_error = str(exc)
+                            st.rerun()
+                        clear_pending_signup()
+                        st.session_state.current_user = user
                         st.rerun()
                     else:
                         st.error(message)
@@ -586,7 +589,9 @@ def render_authentication() -> None:
                     st.session_state.password_reset_active = True
                     st.rerun()
         with customer_register:
-            st.caption("Customer accounts activate immediately and open only the personal nutrition workspace.")
+            st.caption(
+                "Customer accounts open the personal nutrition workspace after one sign-up email verification."
+            )
             with st.form("customer_registration"):
                 a, b = st.columns(2)
                 display_name = a.text_input("Full name")
@@ -597,17 +602,28 @@ def render_authentication() -> None:
                 e, f = st.columns(2)
                 new_password = e.text_input("Choose password", type="password")
                 confirm_password = f.text_input("Confirm password", type="password")
-                create = st.form_submit_button("Create Customer account", type="primary", width="stretch")
+                create = st.form_submit_button(
+                    "Create Customer account", type="primary", width="stretch",
+                    disabled=bool(email_configuration_error),
+                )
             if create:
                 try:
                     if new_password != confirm_password:
                         raise ValueError("Passwords do not match.")
                     if not is_valid_email_address(email):
-                        raise ValueError("A valid email is required for sign-in verification.")
+                        raise ValueError("A valid email is required for sign-up verification.")
                     user = register_account(new_username, new_password, "Customer", display_name, email)
                     profile_payload = default_profile(str(user["id"]), str(user["display_name"]))
                     upsert_profile(profile_payload)
-                    st.success("Customer account created. You can sign in now.")
+                    st.session_state.pending_signup_user = {
+                        key: value for key, value in user.items() if key != "password_hash"
+                    }
+                    st.session_state.pending_signup_email = email.strip().lower()
+                    try:
+                        deliver_signup_code(user, email)
+                    except (EmailDeliveryError, ValueError) as exc:
+                        st.session_state.signup_delivery_error = str(exc)
+                    st.rerun()
                 except ValueError as exc:
                     st.error(str(exc))
                 except Exception:
@@ -624,7 +640,10 @@ def render_authentication() -> None:
                 e, f = st.columns(2)
                 dietitian_password = e.text_input("Choose password", type="password")
                 dietitian_confirm = f.text_input("Confirm password", type="password")
-                apply = st.form_submit_button("Submit Dietitian application", type="primary", width="stretch")
+                apply = st.form_submit_button(
+                    "Submit Dietitian application", type="primary", width="stretch",
+                    disabled=bool(email_configuration_error),
+                )
             if apply:
                 try:
                     if dietitian_password != dietitian_confirm:
@@ -633,11 +652,19 @@ def render_authentication() -> None:
                         raise ValueError("A valid professional email is required for verification.")
                     if len(dietitian_credential.strip()) < 3:
                         raise ValueError("A valid professional registration/license ID is required.")
-                    register_account(
+                    user = register_account(
                         dietitian_username, dietitian_password, "Dietitian", dietitian_name,
                         dietitian_email, dietitian_credential,
                     )
-                    st.success("Application submitted. An Administrator must approve it before sign-in.")
+                    st.session_state.pending_signup_user = {
+                        key: value for key, value in user.items() if key != "password_hash"
+                    }
+                    st.session_state.pending_signup_email = dietitian_email.strip().lower()
+                    try:
+                        deliver_signup_code(user, dietitian_email)
+                    except (EmailDeliveryError, ValueError) as exc:
+                        st.session_state.signup_delivery_error = str(exc)
+                    st.rerun()
                 except ValueError as exc:
                     st.error(str(exc))
                 except Exception:
@@ -663,7 +690,7 @@ def render_authentication() -> None:
                     admin_confirm = f.text_input("Confirm administrator password", type="password")
                     create_admin = st.form_submit_button(
                         "Create first Administrator", type="primary", width="stretch",
-                        disabled=not configured_admin_code,
+                        disabled=not configured_admin_code or bool(email_configuration_error),
                     )
                 if create_admin:
                     try:
@@ -675,8 +702,17 @@ def render_authentication() -> None:
                             raise ValueError("Passwords do not match.")
                         if not is_valid_email_address(admin_email):
                             raise ValueError("A valid Administrator email is required for verification.")
-                        register_admin_account(admin_username, admin_password, admin_name, admin_email)
-                        st.success("Administrator created. Sign in to approve Dietitians and assign customers.")
+                        user = register_admin_account(
+                            admin_username, admin_password, admin_name, admin_email,
+                        )
+                        st.session_state.pending_signup_user = {
+                            key: value for key, value in user.items() if key != "password_hash"
+                        }
+                        st.session_state.pending_signup_email = admin_email.strip().lower()
+                        try:
+                            deliver_signup_code(user, admin_email)
+                        except (EmailDeliveryError, ValueError) as exc:
+                            st.session_state.signup_delivery_error = str(exc)
                         st.rerun()
                     except ValueError as exc:
                         st.error(str(exc))
@@ -686,7 +722,7 @@ def require_login() -> dict:
     existing = st.session_state.get("current_user")
     if existing:
         return existing
-    if st.session_state.get("pending_auth_user"):
+    if st.session_state.get("pending_signup_user"):
         st.session_state.entry_view = "auth"
     entry_view = str(st.session_state.get("entry_view", "landing"))
     if entry_view == "landing":

@@ -215,7 +215,8 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
             approval_status TEXT NOT NULL DEFAULT 'Approved',
             approved_by TEXT,
             approved_at TEXT,
-            is_admin INTEGER NOT NULL DEFAULT 0
+            is_admin INTEGER NOT NULL DEFAULT 0,
+            email_verified_at TEXT
         )
         """,
         """
@@ -339,6 +340,7 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
                 "approved_by": "TEXT",
                 "approved_at": "TEXT",
                 "is_admin": "INTEGER NOT NULL DEFAULT 0",
+                "email_verified_at": "TEXT",
             },
             "lab_reports": {
                 "profile_id": "TEXT NOT NULL DEFAULT ''",
@@ -369,6 +371,13 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
             for column_name, definition in additions.items():
                 if column_name not in present:
                     conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
+                    if table_name == "users" and column_name == "email_verified_at":
+                        # Accounts created before sign-up verification existed have already
+                        # been in active use. Preserve their access during this one-time migration.
+                        conn.execute(
+                            "UPDATE users SET email_verified_at = created_at "
+                            "WHERE email_verified_at IS NULL"
+                        )
 
 
 def upsert_profile(profile: dict[str, Any], db_path: Path = DATABASE_PATH) -> str:
@@ -658,19 +667,22 @@ def acknowledge_all_alerts(profile_id: str = "default-profile",
 def create_user(username: str, password_hash: str, role: str, display_name: str,
                 email: str = "", credential: str = "",
                 db_path: Path = DATABASE_PATH, *, approval_status: str | None = None,
-                is_admin: bool = False) -> dict[str, Any]:
+                is_admin: bool = False, email_verified: bool = True) -> dict[str, Any]:
     user_id = str(uuid.uuid4())
     approval = approval_status or ("Pending" if role == "Dietitian" else "Approved")
-    active = int(approval == "Approved" or is_admin)
+    active = int(email_verified and (approval == "Approved" or is_admin))
     approved_at = utc_now() if active else None
+    email_verified_at = utc_now() if email_verified else None
     with connection(db_path) as conn:
         conn.execute(
             """INSERT INTO users
                (id, username, password_hash, role, display_name, email, credential, active,
-                created_at, approval_status, approved_by, approved_at, is_admin)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)""",
+                created_at, approval_status, approved_by, approved_at, is_admin,
+                email_verified_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)""",
             (user_id, username.strip(), password_hash, role, display_name.strip(),
-             email.strip(), credential.strip(), active, utc_now(), approval, approved_at, int(is_admin)),
+             email.strip().lower(), credential.strip(), active, utc_now(), approval,
+             approved_at, int(is_admin), email_verified_at),
         )
     return get_user(user_id, db_path=db_path) or {}
 
@@ -708,14 +720,22 @@ def update_user_password(user_id: str, password_hash: str,
 
 
 def set_verified_user_email(user_id: str, email: str, db_path: Path = DATABASE_PATH) -> bool:
-    """Store an email only after the caller has completed email verification."""
+    """Store an email and verification timestamp after a successful sign-up code."""
     clean_email = str(email or "").strip().lower()
     if not clean_email:
         raise ValueError("A verified email address is required.")
     with connection(db_path) as conn:
+        verified_at = utc_now()
         cursor = conn.execute(
-            "UPDATE users SET email = ? WHERE id = ?",
-            (clean_email, str(user_id)),
+            """UPDATE users
+               SET email = ?, email_verified_at = ?,
+                   active = CASE WHEN role = 'Customer' OR is_admin = 1 THEN 1 ELSE active END,
+                   approved_at = CASE
+                       WHEN (role = 'Customer' OR is_admin = 1) AND approved_at IS NULL THEN ?
+                       ELSE approved_at
+                   END
+               WHERE id = ?""",
+            (clean_email, verified_at, verified_at, str(user_id)),
         )
     return cursor.rowcount > 0
 
@@ -778,7 +798,7 @@ def list_users(role: str | None = None, db_path: Path = DATABASE_PATH) -> list[d
 
 def has_admin(db_path: Path = DATABASE_PATH) -> bool:
     with connection(db_path) as conn:
-        row = conn.execute("SELECT 1 FROM users WHERE is_admin = 1 AND active = 1 LIMIT 1").fetchone()
+        row = conn.execute("SELECT 1 FROM users WHERE is_admin = 1 LIMIT 1").fetchone()
     return bool(row)
 
 

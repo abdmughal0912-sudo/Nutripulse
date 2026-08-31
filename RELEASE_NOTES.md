@@ -1,13 +1,16 @@
-# NutriPulse AI v4.7.1 — Release Notes
+# NutriPulse AI v4.8.0 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.7.1 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.8.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 ## Release highlights
 
+- OTP is required once for sign-up and for Forgot Password, not for routine login.
+- Existing Customer, Dietitian and Administrator accounts migrate as already verified.
+- Current Streamlit Cloud column selectors keep forms, cards, navigation, charts and tables fitted on mobile, laptop and desktop.
 - Compact centered authentication board with connected password recovery.
 - Streamlit Cloud and local-column compatibility for the centered authentication card.
 - Expiring Gmail recovery code before any PBKDF2 password replacement.
@@ -25,9 +28,9 @@
 - Conflict-safe private SQLite-to-PostgreSQL backup migration utility.
 - Mobile-safe sidebar, stacked forms, horizontally scrollable tabs and responsive charts/tables.
 - Clear email-service setup notice instead of a technical sign-in error when SMTP secrets are missing.
-- Mandatory six-digit email verification after every successful password check.
+- One-time six-digit email verification before a new account can be used.
 - Ten-minute code expiry, five-attempt limit and a 60-second resend cooldown.
-- One-time verified-email enrollment for existing accounts without an email.
+- Password-only login after sign-up email verification.
 - Separate Customer, Dietitian and Administrator workspaces.
 - Administrator approval for Dietitian applications and controlled caseload assignment.
 - Persistent day-to-day meal progression and automatic Week 1 → Week 2 advancement.

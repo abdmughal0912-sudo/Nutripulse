@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.8.0 — 2026-08-31
+
+- Moved OTP verification from every login to one-time account sign-up and Forgot Password recovery.
+- Added persistent `email_verified_at` account state with a safe migration that preserves all existing accounts as verified.
+- Added current Streamlit Cloud `stColumn` compatibility throughout landing, authentication and portal responsive rules.
+- Added screen-width containment, flexible laptop padding, stacked mobile forms, responsive media and scroll-safe tables.
+
 ## 4.7.1 — 2026-08-31
 
 - Added compatibility for both current Streamlit Cloud and local column identifiers so the authentication board remains compact and centered on desktop and mobile.

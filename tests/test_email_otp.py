@@ -18,8 +18,8 @@ from src.email_otp import (
     is_valid_email_address,
     mask_email,
     resend_wait_seconds,
-    send_login_code,
     send_password_reset_code,
+    send_signup_code,
     verify_login_code,
 )
 
@@ -54,16 +54,18 @@ class EmailOtpTests(unittest.TestCase):
         self.assertEqual(resend_wait_seconds(challenge, now=160.0), 0)
 
     @patch("src.email_otp.smtplib.SMTP")
-    def test_smtp_uses_tls_and_authentication(self, smtp_class) -> None:
+    def test_signup_smtp_uses_tls_and_authentication(self, smtp_class) -> None:
         smtp = smtp_class.return_value.__enter__.return_value
         settings = SmtpSettings(
             host="smtp.gmail.com", port=587, username="sender@gmail.com",
             password="app-password", sender_email="sender@gmail.com",
         )
-        send_login_code(settings, "person@example.com", "Person", "123456")
+        send_signup_code(settings, "person@example.com", "Person", "123456")
         smtp.starttls.assert_called_once()
         smtp.login.assert_called_once_with("sender@gmail.com", "app-password")
         smtp.send_message.assert_called_once()
+        message = smtp.send_message.call_args.args[0]
+        self.assertIn("sign-up", str(message["Subject"]).lower())
 
     @patch("src.email_otp.smtplib.SMTP")
     def test_password_reset_email_is_clearly_identified(self, smtp_class) -> None:
@@ -83,11 +85,15 @@ class EmailOtpTests(unittest.TestCase):
             initialize_database(db_path)
             user = create_user(
                 "otp_user", hash_password("SecurePass123"), "Customer", "OTP User",
-                db_path=db_path,
+                email="verified@example.com", db_path=db_path, email_verified=False,
             )
+            self.assertFalse(user["email_verified_at"])
+            self.assertEqual(user["active"], 0)
             self.assertTrue(set_verified_user_email(user["id"], "Verified@Example.com", db_path))
             saved = get_user(user["id"], db_path)
             self.assertEqual(saved["email"], "verified@example.com")
+            self.assertTrue(saved["email_verified_at"])
+            self.assertEqual(saved["active"], 1)
 
     def test_verified_reset_replaces_pbkdf2_password(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
@@ -127,6 +133,7 @@ class EmailOtpTests(unittest.TestCase):
             "id": "user-1", "username": "person", "password_hash": encoded,
             "role": "Customer", "display_name": "Person", "email": "person@example.com",
             "active": 1, "approval_status": "Approved", "is_admin": 0,
+            "email_verified_at": "2026-08-31T12:00:00+00:00",
         }
         with patch("src.auth.get_user_by_username", return_value=fake_user), patch(
             "src.auth.record_login",
@@ -137,6 +144,31 @@ class EmailOtpTests(unittest.TestCase):
         self.assertIsNotNone(user)
         self.assertEqual(message, "Signed in.")
         record_login.assert_not_called()
+
+    def test_unverified_signup_requires_otp_but_verified_login_does_not(self) -> None:
+        encoded = hash_password("SecurePass123")
+        pending = {
+            "id": "user-2", "username": "new_person", "password_hash": encoded,
+            "role": "Customer", "display_name": "New Person", "email": "new@example.com",
+            "active": 1, "approval_status": "Approved", "is_admin": 0,
+            "email_verified_at": None,
+        }
+        with patch("src.auth.get_user_by_username", return_value=pending), patch(
+            "src.auth.record_login",
+        ) as record_login:
+            user, message = authenticate_with_status("new_person", "SecurePass123")
+        self.assertIsNotNone(user)
+        self.assertIn("verification required", message.lower())
+        record_login.assert_not_called()
+
+        verified = dict(pending, email_verified_at="2026-08-31T12:00:00+00:00")
+        with patch("src.auth.get_user_by_username", return_value=verified), patch(
+            "src.auth.record_login",
+        ) as record_login:
+            user, message = authenticate_with_status("new_person", "SecurePass123")
+        self.assertIsNotNone(user)
+        self.assertEqual(message, "Signed in.")
+        record_login.assert_called_once_with("user-2")
 
 
 if __name__ == "__main__":

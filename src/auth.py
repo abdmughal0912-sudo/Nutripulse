@@ -46,7 +46,10 @@ def register_account(username: str, password: str, role: str, display_name: str,
         raise ValueError("Enter your full display name.")
     if get_user_by_username(clean_username):
         raise ValueError("That username is already registered.")
-    return create_user(clean_username, hash_password(password), role, display_name, email, credential)
+    return create_user(
+        clean_username, hash_password(password), role, display_name, email, credential,
+        email_verified=False,
+    )
 
 
 def register_admin_account(username: str, password: str, display_name: str,
@@ -63,6 +66,7 @@ def register_admin_account(username: str, password: str, display_name: str,
     return create_user(
         clean_username, hash_password(password), "Dietitian", display_name, email,
         "System Administrator", approval_status="Approved", is_admin=True,
+        email_verified=False,
     )
 
 
@@ -72,6 +76,11 @@ def authenticate_with_status(
     user = get_user_by_username(username)
     if not user or not verify_password(password, str(user["password_hash"])):
         return None, "Incorrect username or password."
+    if "email_verified_at" in user and not str(user.get("email_verified_at") or "").strip():
+        return (
+            {key: value for key, value in user.items() if key != "password_hash"},
+            "Email verification required to complete sign-up.",
+        )
     approval = str(user.get("approval_status", "Approved"))
     if str(user.get("role")) == "Dietitian" and approval == "Pending":
         return None, "Your Dietitian application is awaiting administrator approval."

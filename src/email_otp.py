@@ -1,4 +1,4 @@
-"""Email-delivered one-time codes for NutriPulse sign-in verification."""
+"""Email-delivered one-time codes for sign-up verification and password recovery."""
 
 from __future__ import annotations
 
@@ -123,16 +123,16 @@ def _send_security_code(
     is_reset = purpose == "password-reset"
     message["Subject"] = (
         f"{code} is your NutriPulse password reset code"
-        if is_reset else f"{code} is your NutriPulse verification code"
+        if is_reset else f"{code} is your NutriPulse sign-up verification code"
     )
     message["From"] = formataddr((settings.sender_name, settings.sender_email))
     message["To"] = recipient_email
     safe_name = str(recipient_name or "NutriPulse user").strip()
     message.set_content(
         f"Hello {safe_name},\n\n"
-        f"Your NutriPulse {'password reset' if is_reset else 'sign-in verification'} code is: {code}\n\n"
+        f"Your NutriPulse {'password reset' if is_reset else 'account sign-up verification'} code is: {code}\n\n"
         "This code expires in 10 minutes and can be used only once. "
-        f"If you did not try to {'reset your password' if is_reset else 'sign in'}, "
+        f"If you did not try to {'reset your password' if is_reset else 'create this account'}, "
         "do not share this code and you can ignore this email.\n\n"
         "NutriPulse AI Security"
     )
@@ -157,12 +157,19 @@ def _send_security_code(
         ) from exc
 
 
-def send_login_code(
+def send_signup_code(
     settings: SmtpSettings, recipient_email: str, recipient_name: str, code: str,
 ) -> None:
     _send_security_code(
-        settings, recipient_email, recipient_name, code, purpose="sign-in",
+        settings, recipient_email, recipient_name, code, purpose="sign-up",
     )
+
+
+def send_login_code(
+    settings: SmtpSettings, recipient_email: str, recipient_name: str, code: str,
+) -> None:
+    """Backward-compatible alias; interactive logins no longer send an OTP."""
+    send_signup_code(settings, recipient_email, recipient_name, code)
 
 
 def send_password_reset_code(

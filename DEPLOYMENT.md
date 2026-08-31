@@ -1,4 +1,4 @@
-# NutriPulse v4.7.1 deployment
+# NutriPulse v4.8.0 deployment
 
 ## Local Windows deployment
 
@@ -20,11 +20,12 @@ NUTRIPULSE_SMTP_SENDER_EMAIL=your-sender@gmail.com
 NUTRIPULSE_SMTP_SENDER_NAME=NutriPulse AI
 ```
 
-Email verification is mandatory after a valid password. For Gmail SMTP, enable
+Email verification is mandatory once during sign-up and for password recovery;
+routine login uses the verified account's username and password. For Gmail SMTP, enable
 Google 2-Step Verification on a dedicated sender account and generate an App
 Password. Put it only in the hosting provider's secret manager. New accounts
-must register a valid email. An older account without an email is offered a
-one-time email enrollment, and its address is saved only after the code succeeds.
+must register a valid email. Existing accounts are marked verified during the
+one-time schema migration so current users are not locked out.
 
 Codes contain six digits, expire after 10 minutes, allow five attempts and can
 be resent after 60 seconds. The app stores only a one-way digest of the active
