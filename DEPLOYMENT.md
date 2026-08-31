@@ -1,4 +1,4 @@
-# NutriPulse v4.6.1 deployment
+# NutriPulse v4.7.0 deployment
 
 ## Local Windows deployment
 
@@ -28,7 +28,9 @@ one-time email enrollment, and its address is saved only after the code succeeds
 
 Codes contain six digits, expire after 10 minutes, allow five attempts and can
 be resent after 60 seconds. The app stores only a one-way digest of the active
-code in the user's server-side Streamlit session.
+code in the user's server-side Streamlit session. The same verified sender
+delivers password-recovery codes; NutriPulse updates the PBKDF2 password hash
+only after a valid recovery code is accepted.
 
 Optional assistant adapter:
 

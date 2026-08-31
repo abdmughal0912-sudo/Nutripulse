@@ -109,8 +109,9 @@ def resend_wait_seconds(challenge: dict[str, Any] | None, now: float | None = No
     return max(0, int(OTP_RESEND_SECONDS - elapsed + 0.999))
 
 
-def send_login_code(
+def _send_security_code(
     settings: SmtpSettings, recipient_email: str, recipient_name: str, code: str,
+    *, purpose: str,
 ) -> None:
     settings.validate()
     if not is_valid_email_address(recipient_email):
@@ -119,15 +120,20 @@ def send_login_code(
         raise ValueError("Verification codes must contain six digits.")
 
     message = EmailMessage()
-    message["Subject"] = f"{code} is your NutriPulse verification code"
+    is_reset = purpose == "password-reset"
+    message["Subject"] = (
+        f"{code} is your NutriPulse password reset code"
+        if is_reset else f"{code} is your NutriPulse verification code"
+    )
     message["From"] = formataddr((settings.sender_name, settings.sender_email))
     message["To"] = recipient_email
     safe_name = str(recipient_name or "NutriPulse user").strip()
     message.set_content(
         f"Hello {safe_name},\n\n"
-        f"Your NutriPulse sign-in verification code is: {code}\n\n"
+        f"Your NutriPulse {'password reset' if is_reset else 'sign-in verification'} code is: {code}\n\n"
         "This code expires in 10 minutes and can be used only once. "
-        "If you did not try to sign in, do not share this code and you can ignore this email.\n\n"
+        f"If you did not try to {'reset your password' if is_reset else 'sign in'}, "
+        "do not share this code and you can ignore this email.\n\n"
         "NutriPulse AI Security"
     )
 
@@ -149,3 +155,19 @@ def send_login_code(
         raise EmailDeliveryError(
             "The verification email could not be sent. Try again or contact the Administrator."
         ) from exc
+
+
+def send_login_code(
+    settings: SmtpSettings, recipient_email: str, recipient_name: str, code: str,
+) -> None:
+    _send_security_code(
+        settings, recipient_email, recipient_name, code, purpose="sign-in",
+    )
+
+
+def send_password_reset_code(
+    settings: SmtpSettings, recipient_email: str, recipient_name: str, code: str,
+) -> None:
+    _send_security_code(
+        settings, recipient_email, recipient_name, code, purpose="password-reset",
+    )

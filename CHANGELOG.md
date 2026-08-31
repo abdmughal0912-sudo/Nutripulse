@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.7.0 — 2026-08-31
+
+- Rebuilt authentication as a compact centered account board while keeping landing-page actions at the top right.
+- Added verified Gmail password recovery with expiring codes and PBKDF2 password replacement.
+- Added soft cyan, lilac, champagne and mint accents throughout authenticated role portals.
+- Added animated star-wave layers to authentication and portal backgrounds with reduced-motion support.
+- Increased portal captions, labels, card copy and sidebar navigation to normal readable sizes.
+
 ## 4.6.1 — 2026-08-31
 
 - Moved landing/auth presentation into a fresh deployment module so Streamlit Cloud reloads it reliably.

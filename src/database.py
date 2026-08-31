@@ -694,6 +694,19 @@ def record_login(user_id: str, db_path: Path = DATABASE_PATH) -> None:
         conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (utc_now(), str(user_id)))
 
 
+def update_user_password(user_id: str, password_hash: str,
+                         db_path: Path = DATABASE_PATH) -> bool:
+    """Replace an account password only after the caller verifies account ownership."""
+    if not str(password_hash or "").startswith("pbkdf2_sha256$"):
+        raise ValueError("A valid PBKDF2 password hash is required.")
+    with connection(db_path) as conn:
+        cursor = conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ? AND active = 1",
+            (str(password_hash), str(user_id)),
+        )
+    return cursor.rowcount > 0
+
+
 def set_verified_user_email(user_id: str, email: str, db_path: Path = DATABASE_PATH) -> bool:
     """Store an email only after the caller has completed email verification."""
     clean_email = str(email or "").strip().lower()

@@ -15,7 +15,7 @@ import streamlit as st
 
 from src.alerts import alert_counts, evaluate_alerts
 from src.assistant import answer_question, assistant_api_status
-from src.auth import authenticate_with_status, register_account, register_admin_account
+from src.auth import authenticate_with_status, hash_password, register_account, register_admin_account
 from src.constants import APP_NAME, APP_SUBTITLE, APP_VERSION, ASSET_DIR, DATA_DIR, SUPPORTED_LAB_TESTS
 from src.database import (
     acknowledge_alert,
@@ -31,6 +31,7 @@ from src.database import (
     get_food_logs,
     get_measurements,
     get_schedule_progress,
+    get_user_by_username,
     has_admin,
     initialize_database,
     list_alerts,
@@ -61,17 +62,20 @@ from src.database import (
     set_verified_user_email,
     submit_questionnaire,
     sync_alerts,
+    update_user_password,
     upsert_profile,
 )
 from src.diet_engine import generate_plan, grocery_list
 from src.email_otp import (
     EmailDeliveryError, SmtpSettings, create_login_challenge, is_valid_email_address,
-    mask_email, resend_wait_seconds, send_login_code, verify_login_code,
+    mask_email, resend_wait_seconds, send_login_code, send_password_reset_code,
+    verify_login_code,
 )
 from src.food_analysis import analyze_food_image
 from src.image_sources import RemoteImageError, fetch_public_image
 from src.lab_analyzer import assess_safety, classify_manual_results, extract_text_from_upload, parse_lab_text
 from src.landing_theme import apply_landing_theme
+from src.portal_theme import apply_portal_theme
 from src.ml_engine import food_vision_status, model_status, predict_quality, train_quality_model
 from src.nutrition import (
     calculate_bmi, calculate_energy, dataset_quality, load_food_data,
@@ -93,6 +97,7 @@ st.set_page_config(
 )
 apply_theme()
 apply_landing_theme()
+apply_portal_theme()
 
 
 def secret_value(name: str, default: str = "") -> str:
@@ -157,11 +162,22 @@ def default_profile(profile_id: str, name: str) -> dict:
 PENDING_LOGIN_KEYS = (
     "pending_auth_user", "pending_login_email", "login_otp", "otp_delivery_error",
 )
+PASSWORD_RESET_KEYS = (
+    "password_reset_active", "password_reset_user", "password_reset_email",
+    "password_reset_otp", "password_reset_error",
+)
 
 
 def clear_pending_login() -> None:
     for key in PENDING_LOGIN_KEYS:
         st.session_state.pop(key, None)
+
+
+def clear_password_reset(*, keep_notice: bool = False) -> None:
+    for key in PASSWORD_RESET_KEYS:
+        st.session_state.pop(key, None)
+    if not keep_notice:
+        st.session_state.pop("password_reset_notice", None)
 
 
 def deliver_login_code(user: dict, email: str) -> None:
@@ -177,6 +193,110 @@ def deliver_login_code(user: dict, email: str) -> None:
     st.session_state.pending_login_email = email.strip().lower()
     st.session_state.login_otp = challenge
     st.session_state.pop("otp_delivery_error", None)
+
+
+def deliver_password_reset_code(user: dict) -> None:
+    email = str(user.get("email", "")).strip().lower()
+    if not is_valid_email_address(email):
+        raise ValueError("This account does not have a verified recovery email. Contact the Administrator.")
+    allowed, wait_seconds = reserve_email_otp_delivery(str(user["id"]))
+    if not allowed:
+        if wait_seconds >= 60:
+            raise ValueError("Too many recovery emails were requested. Try again later.")
+        raise ValueError(f"Wait {wait_seconds} seconds before requesting another code.")
+    challenge, code = create_login_challenge(str(user["id"]), email)
+    challenge["purpose"] = "password-reset"
+    send_password_reset_code(
+        smtp_settings(), email, str(user.get("display_name", "NutriPulse user")), code,
+    )
+    st.session_state.password_reset_user = {
+        key: value for key, value in user.items() if key != "password_hash"
+    }
+    st.session_state.password_reset_email = email
+    st.session_state.password_reset_otp = challenge
+    st.session_state.pop("password_reset_error", None)
+
+
+def render_password_reset() -> None:
+    st.markdown(
+        '<div class="np-reset-heading"><span>ACCOUNT RECOVERY</span>'
+        '<h3>Reset your password</h3><p>We will verify your registered Gmail address before changing anything.</p></div>',
+        unsafe_allow_html=True,
+    )
+    reset_user = st.session_state.get("password_reset_user")
+    challenge = st.session_state.get("password_reset_otp")
+    reset_error = str(st.session_state.get("password_reset_error", "")).strip()
+    if reset_error:
+        st.error(reset_error)
+
+    if not reset_user or not challenge:
+        with st.form("password_reset_request"):
+            reset_username = st.text_input("Registered username", key="password_reset_username")
+            request_code = st.form_submit_button(
+                "Send password reset code", type="primary", width="stretch",
+            )
+        if request_code:
+            user = get_user_by_username(reset_username)
+            try:
+                if not user or not int(user.get("active", 0)):
+                    raise ValueError("No active account with a verified recovery email was found.")
+                deliver_password_reset_code(user)
+                st.rerun()
+            except (EmailDeliveryError, ValueError) as exc:
+                st.session_state.password_reset_error = str(exc)
+                st.rerun()
+    else:
+        destination = str(st.session_state.get("password_reset_email", challenge.get("email", "")))
+        st.success(f"Recovery code sent to {mask_email(destination)}.")
+        with st.form("password_reset_confirmation"):
+            reset_code = st.text_input(
+                "Six-digit recovery code", max_chars=6, placeholder="000000",
+            )
+            new_reset_password = st.text_input("New password", type="password")
+            confirm_reset_password = st.text_input("Confirm new password", type="password")
+            save_reset = st.form_submit_button(
+                "Verify code and reset password", type="primary", width="stretch",
+            )
+        if save_reset:
+            try:
+                if new_reset_password != confirm_reset_password:
+                    raise ValueError("Passwords do not match.")
+                encoded_password = hash_password(new_reset_password)
+                verified, message = verify_login_code(
+                    challenge, str(reset_user["id"]), reset_code,
+                )
+                if not verified:
+                    raise ValueError(message)
+                if not update_user_password(str(reset_user["id"]), encoded_password):
+                    raise ValueError("The password could not be updated. Contact the Administrator.")
+                clear_password_reset(keep_notice=True)
+                st.session_state.password_reset_notice = (
+                    "Password reset successfully. Sign in with your new password."
+                )
+                st.rerun()
+            except ValueError as exc:
+                st.session_state.password_reset_error = str(exc)
+                st.rerun()
+
+        wait_seconds = resend_wait_seconds(challenge)
+        resend_col, cancel_col = st.columns(2)
+        resend_label = "Resend code" if wait_seconds == 0 else f"Resend in {wait_seconds}s"
+        if resend_col.button(
+            resend_label, disabled=wait_seconds > 0, width="stretch", key="resend_password_reset",
+        ):
+            try:
+                deliver_password_reset_code(reset_user)
+                st.rerun()
+            except (EmailDeliveryError, ValueError) as exc:
+                st.session_state.password_reset_error = str(exc)
+                st.rerun()
+        if cancel_col.button("Cancel recovery", width="stretch", key="cancel_password_reset_code"):
+            clear_password_reset()
+            st.rerun()
+
+    if st.button("← Back to sign in", width="stretch", key="back_from_password_reset"):
+        clear_password_reset()
+        st.rerun()
 
 
 def render_email_verification(user: dict) -> None:
@@ -281,6 +401,7 @@ def select_entry_view(view: str, default_tab: str = "Sign in") -> None:
     st.session_state.auth_default_tab = default_tab
     if view == "landing":
         clear_pending_login()
+        clear_password_reset()
 
 
 def render_public_landing() -> None:
@@ -382,7 +503,6 @@ def render_public_landing() -> None:
 
 
 def render_authentication() -> None:
-    auth_image = asset_data_uri("food_vision_luxury.jpg")
     back_col, secure_col = st.columns([5, 1])
     with back_col:
         st.markdown(
@@ -396,24 +516,16 @@ def render_authentication() -> None:
             on_click=select_entry_view, args=("landing", "Sign in"),
         )
 
-    auth_form, auth_visual = st.columns([1.05, .95], gap="small")
-    with auth_visual:
-        st.markdown(
-            f"""
-            <aside class="np-auth-visual" style="background-image:
-              linear-gradient(180deg,rgba(4,8,7,.06),rgba(4,8,7,.72)),url('{auth_image}')">
-              <div class="np-auth-glow"></div>
-              <div class="np-auth-copy"><span>PRIVATE BY ROLE</span><h2>Your health story,<br>beautifully connected.</h2><p>Secure email verification · persistent account history · separated clinical access</p></div>
-            </aside>
-            """,
-            unsafe_allow_html=True,
-        )
-
+    st.markdown(
+        '<div class="np-auth-starfield" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>',
+        unsafe_allow_html=True,
+    )
+    auth_left, auth_form, auth_right = st.columns([1.1, 1.45, 1.1], gap="small")
     with auth_form:
         st.markdown(
-            '<div class="np-auth-form-marker"><span>WELCOME TO NUTRIPULSE</span>'
-            '<h1>Secure access.<br><em>Personal direction.</em></h1>'
-            '<p>Sign in to continue, or create the account that matches your role.</p></div>',
+            '<div class="np-auth-card-marker"><span>WELCOME TO NUTRIPULSE</span>'
+            '<h1>Secure access.</h1>'
+            '<p>Sign in, create an account, or recover your password from one protected board.</p></div>',
             unsafe_allow_html=True,
         )
         pending_user = st.session_state.get("pending_auth_user")
@@ -437,28 +549,42 @@ def render_authentication() -> None:
         tabs = st.tabs(tab_names, default=default_tab)
         sign_in, customer_register, dietitian_register = tabs[:3]
         with sign_in:
-            st.caption("Use your registered account, then verify the code sent to your email.")
-            with st.form("account_login"):
-                username = st.text_input("Username", key="login_username")
-                password = st.text_input("Password", type="password", key="login_password")
-                submitted = st.form_submit_button(
-                    "Enter NutriPulse", type="primary", width="stretch",
-                    disabled=bool(email_configuration_error),
-                )
-            if submitted:
-                user, message = authenticate_with_status(username, password, record_success=False)
-                if user:
-                    clear_pending_login()
-                    st.session_state.pending_auth_user = user
-                    registered_email = str(user.get("email", "")).strip().lower()
-                    if is_valid_email_address(registered_email):
-                        try:
-                            deliver_login_code(user, registered_email)
-                        except (EmailDeliveryError, ValueError) as exc:
-                            st.session_state.otp_delivery_error = str(exc)
+            reset_notice = str(st.session_state.get("password_reset_notice", "")).strip()
+            if reset_notice:
+                st.success(reset_notice)
+                st.session_state.pop("password_reset_notice", None)
+            if st.session_state.get("password_reset_active"):
+                render_password_reset()
+            else:
+                st.caption("Use your registered account, then verify the code sent to your email.")
+                with st.form("account_login"):
+                    username = st.text_input("Username", key="login_username")
+                    password = st.text_input("Password", type="password", key="login_password")
+                    submitted = st.form_submit_button(
+                        "Enter NutriPulse", type="primary", width="stretch",
+                        disabled=bool(email_configuration_error),
+                    )
+                if submitted:
+                    user, message = authenticate_with_status(username, password, record_success=False)
+                    if user:
+                        clear_pending_login()
+                        st.session_state.pending_auth_user = user
+                        registered_email = str(user.get("email", "")).strip().lower()
+                        if is_valid_email_address(registered_email):
+                            try:
+                                deliver_login_code(user, registered_email)
+                            except (EmailDeliveryError, ValueError) as exc:
+                                st.session_state.otp_delivery_error = str(exc)
+                        st.rerun()
+                    else:
+                        st.error(message)
+                if st.button(
+                    "Forgot password?", key="open_password_reset", type="tertiary",
+                    width="stretch", disabled=bool(email_configuration_error),
+                ):
+                    clear_password_reset()
+                    st.session_state.password_reset_active = True
                     st.rerun()
-                else:
-                    st.error(message)
         with customer_register:
             st.caption("Customer accounts activate immediately and open only the personal nutrition workspace.")
             with st.form("customer_registration"):
@@ -572,6 +698,7 @@ def require_login() -> dict:
 
 current_user = require_login()
 is_admin = bool(int(current_user.get("is_admin", 0)))
+st.markdown('<span class="np-portal-marker" aria-hidden="true"></span>', unsafe_allow_html=True)
 sidebar_brand()
 if current_user["role"] == "Dietitian":
     linked_customers = (

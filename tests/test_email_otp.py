@@ -6,10 +6,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from src.auth import authenticate_with_status, hash_password
+from src.auth import authenticate_with_status, hash_password, verify_password
 from src.database import (
     create_user, get_user, initialize_database, reserve_email_otp_delivery,
-    set_verified_user_email,
+    set_verified_user_email, update_user_password,
 )
 from src.email_otp import (
     OTP_MAX_ATTEMPTS,
@@ -19,6 +19,7 @@ from src.email_otp import (
     mask_email,
     resend_wait_seconds,
     send_login_code,
+    send_password_reset_code,
     verify_login_code,
 )
 
@@ -64,6 +65,18 @@ class EmailOtpTests(unittest.TestCase):
         smtp.login.assert_called_once_with("sender@gmail.com", "app-password")
         smtp.send_message.assert_called_once()
 
+    @patch("src.email_otp.smtplib.SMTP")
+    def test_password_reset_email_is_clearly_identified(self, smtp_class) -> None:
+        smtp = smtp_class.return_value.__enter__.return_value
+        settings = SmtpSettings(
+            host="smtp.gmail.com", port=587, username="sender@gmail.com",
+            password="app-password", sender_email="sender@gmail.com",
+        )
+        send_password_reset_code(settings, "person@example.com", "Person", "654321")
+        message = smtp.send_message.call_args.args[0]
+        self.assertIn("password reset", str(message["Subject"]).lower())
+        self.assertIn("password reset", message.get_content().lower())
+
     def test_verified_email_is_persisted(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             db_path = Path(folder) / "otp.db"
@@ -75,6 +88,20 @@ class EmailOtpTests(unittest.TestCase):
             self.assertTrue(set_verified_user_email(user["id"], "Verified@Example.com", db_path))
             saved = get_user(user["id"], db_path)
             self.assertEqual(saved["email"], "verified@example.com")
+
+    def test_verified_reset_replaces_pbkdf2_password(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            db_path = Path(folder) / "password-reset.db"
+            initialize_database(db_path)
+            user = create_user(
+                "reset_user", hash_password("OriginalPass123"), "Customer", "Reset User",
+                email="reset@example.com", db_path=db_path,
+            )
+            replacement = hash_password("ReplacementPass123")
+            self.assertTrue(update_user_password(user["id"], replacement, db_path))
+            saved = get_user(user["id"], db_path)
+            self.assertFalse(verify_password("OriginalPass123", saved["password_hash"]))
+            self.assertTrue(verify_password("ReplacementPass123", saved["password_hash"]))
 
     def test_database_delivery_rate_limit(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
