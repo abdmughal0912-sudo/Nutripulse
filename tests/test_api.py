@@ -6,6 +6,8 @@ import os
 import unittest
 
 from fastapi.testclient import TestClient
+
+from src.constants import APP_VERSION
 from PIL import Image
 
 from api import app
@@ -22,7 +24,7 @@ class ApiTests(unittest.TestCase):
     def test_root_health_and_openapi(self) -> None:
         root = self.client.get("/")
         self.assertEqual(root.status_code, 200)
-        self.assertEqual(root.json()["version"], "4.3.0")
+        self.assertEqual(root.json()["version"], APP_VERSION)
         health = self.client.get("/health")
         self.assertEqual(health.status_code, 200)
         self.assertGreaterEqual(health.json()["food_records"], 8_000)
