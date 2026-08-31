@@ -1,5 +1,10 @@
 # Changelog
 
+## 4.7.1 — 2026-08-31
+
+- Added compatibility for both current Streamlit Cloud and local column identifiers so the authentication board remains compact and centered on desktop and mobile.
+- Updated the documented live application address to the public `nutripulse-ai.streamlit.app` URL.
+
 ## 4.7.0 — 2026-08-31
 
 - Rebuilt authentication as a compact centered account board while keeping landing-page actions at the top right.

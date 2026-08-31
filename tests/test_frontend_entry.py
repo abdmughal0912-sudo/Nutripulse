@@ -52,6 +52,7 @@ class FrontendEntryTests(unittest.TestCase):
     def test_authentication_is_a_compact_centered_board(self) -> None:
         self.assertIn('max-width:720px!important', PORTAL_THEME_SOURCE)
         self.assertIn(':has(.np-auth-card-marker)', PORTAL_THEME_SOURCE)
+        self.assertIn('[data-testid="stColumn"]', PORTAL_THEME_SOURCE)
 
 
 if __name__ == "__main__":

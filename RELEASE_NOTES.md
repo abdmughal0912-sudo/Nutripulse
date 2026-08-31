@@ -1,14 +1,15 @@
-# NutriPulse AI v4.7.0 — Release Notes
+# NutriPulse AI v4.7.1 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.7.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.7.1 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 ## Release highlights
 
 - Compact centered authentication board with connected password recovery.
+- Streamlit Cloud and local-column compatibility for the centered authentication card.
 - Expiring Gmail recovery code before any PBKDF2 password replacement.
 - Light cyan, lilac, champagne and mint accents across authenticated portals.
 - Animated star-wave portal backgrounds and normal-sized readable copy.
