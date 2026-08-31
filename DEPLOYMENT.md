@@ -1,4 +1,4 @@
-# NutriPulse v4.8.0 deployment
+# NutriPulse v4.8.1 deployment
 
 ## Local Windows deployment
 

@@ -1,10 +1,10 @@
-# NutriPulse AI v4.8.0 — Release Notes
+# NutriPulse AI v4.8.1 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.8.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.8.1 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 ## Release highlights
 

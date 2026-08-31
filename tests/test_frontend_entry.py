@@ -59,6 +59,23 @@ class FrontendEntryTests(unittest.TestCase):
         self.assertIn(':has(.np-auth-card-marker)', PORTAL_THEME_SOURCE)
         self.assertIn('[data-testid="stColumn"]', PORTAL_THEME_SOURCE)
 
+    def test_clinical_flags_do_not_render_streamlit_component_objects(self) -> None:
+        self.assertNotIn(
+            'st.warning(" · ".join(conditions)) if conditions else st.success',
+            APP_SOURCE,
+        )
+        self.assertNotIn(
+            'st.error(" · ".join(allergies)) if allergies else st.success',
+            APP_SOURCE,
+        )
+        for marker in (
+            'if conditions:',
+            'Conditions requiring attention:',
+            'if allergies:',
+            'Recorded sensitivities:',
+        ):
+            self.assertIn(marker, APP_SOURCE)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,5 +1,10 @@
 # Changelog
 
+## 4.8.1 — 2026-08-31
+
+- Fixed Administrator and Dietitian Customer Overview so flagged conditions and allergies render as alerts without exposing Streamlit `DeltaGenerator` internals.
+- Normalized empty condition/allergy entries before presentation and added regression coverage for both populated and empty states.
+
 ## 4.8.0 — 2026-08-31
 
 - Moved OTP verification from every login to one-time account sign-up and Forgot Password recovery.

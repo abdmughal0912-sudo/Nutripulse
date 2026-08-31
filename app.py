@@ -2358,11 +2358,19 @@ def render_clinical_overview() -> None:
     left, right = st.columns(2)
     with left:
         st.subheader("Flagged conditions")
-        conditions = selected_profile.get("conditions", [])
-        st.warning(" · ".join(conditions)) if conditions else st.success("No conditions recorded.")
+        conditions = [str(item).strip() for item in selected_profile.get("conditions", []) if str(item).strip()]
+        if conditions:
+            st.warning("Conditions requiring attention: " + " · ".join(conditions))
+        else:
+            st.success("No conditions recorded.")
+
         st.subheader("Allergies")
-        allergies = selected_profile.get("allergies", [])
-        st.error(" · ".join(allergies)) if allergies else st.success("No allergies recorded.")
+        allergies = [str(item).strip() for item in selected_profile.get("allergies", []) if str(item).strip()]
+        if allergies:
+            st.error("Recorded sensitivities: " + " · ".join(allergies))
+        else:
+            st.success("No allergies recorded.")
+
         if selected_profile.get("medications"):
             st.info(f"Medication list for review: {selected_profile['medications']}")
     with right:
