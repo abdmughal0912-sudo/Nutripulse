@@ -1,15 +1,16 @@
-# NutriPulse AI v4.10.0 — Release Notes
+# NutriPulse AI v4.10.1 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.10.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.10.1 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 **[Read the complete project and implementation document](docs/NUTRIPULSE_COMPLETE_PROJECT_DOCUMENT.md)**
 
 ## Release highlights
 
+- Streamlit hot redeploys now detect and reload an older cached NutriGuide or diet-engine module instead of failing at application startup.
 - Approved Dietitian portal activity now publishes a persistent heartbeat to assigned Customers only.
 - Assigned Customers see **DIETITIAN IS LIVE** as a portal banner, toast and Alert Center notification.
 - Customer Care Team shows **DIETITIAN IS LIVE** or **DIETITIAN IS OFFLINE** in a dedicated top-right status card.
