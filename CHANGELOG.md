@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.10.1 — 2026-09-01
+
+- Added a guarded NutriGuide import loader for Streamlit hosts that retain older imported modules during a hot redeploy.
+- Reloaded a stale `diet_engine` before retrying the assistant import when the current assistant requires newer planning exports.
+- Added regression coverage for both normal startup and a simulated stale assistant-module cache.
+
 ## 4.10.0 — 2026-09-01
 
 - Added approved-Dietitian live presence with a 60-second authenticated heartbeat and configurable five-minute inactivity window.
