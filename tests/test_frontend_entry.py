@@ -92,6 +92,8 @@ class FrontendEntryTests(unittest.TestCase):
             "list_live_dietitians_for_customer", "clear_user_presence",
             "Build my grocery list", "Suggest an allergy-aware lunch swap",
             "Summarize my weekly progress", "Message sounds", "pending_chat_sound",
+            "DIETITIAN IS OFFLINE", "np-care-presence", "Voice replies", "Voice alerts",
+            "speech_component_html", "pending_assistant_voice",
         ):
             self.assertIn(marker, APP_SOURCE)
         self.assertIn("np-live-banner", PORTAL_THEME_SOURCE)

@@ -80,6 +80,8 @@ def apply_portal_theme() -> None:
         .np-live-banner strong{color:#fff;font-size:1rem}.np-live-banner small{color:#b8ccc5!important;font-size:.78rem!important}
         .np-live-practitioner{display:flex;align-items:center;gap:.75rem;margin:.55rem 0 .9rem;padding:.75rem .8rem;border:1px solid rgba(190,242,100,.24);border-radius:15px;background:rgba(22,101,52,.18)}
         .np-live-practitioner div{display:grid}.np-live-practitioner strong{color:#d9f99d;font-size:.72rem;letter-spacing:.09em}.np-live-practitioner small{color:#9fb7ae!important;font-size:.7rem!important}
+        .np-care-presence{display:grid;gap:.22rem;justify-items:end;text-align:right;margin:-.2rem 0 .7rem;padding:.7rem .8rem;border:1px solid rgba(190,242,100,.30);border-radius:15px;background:rgba(22,101,52,.18)}
+        .np-care-presence span{display:flex;align-items:center;gap:.48rem;color:#d9f99d;font-size:.72rem;font-weight:900;letter-spacing:.08em}.np-care-presence i{width:.62rem;height:.62rem;border-radius:50%;background:#bef264;box-shadow:0 0 15px #bef264;animation:np-live-pulse 1.8s ease-in-out infinite}.np-care-presence small{color:#adc2ba!important;font-size:.7rem!important}.np-care-presence.offline{border-color:rgba(148,163,184,.22);background:rgba(51,65,85,.16)}.np-care-presence.offline span{color:#cbd5e1}.np-care-presence.offline i{background:#64748b;box-shadow:none;animation:none}
         .np-assistant-meta{margin:.2rem 0 .55rem;padding:.55rem .7rem;border-radius:12px;border:1px solid rgba(165,243,252,.15);background:rgba(165,243,252,.055);color:#a9c7bd;font-size:.75rem}
         .np-assistant-meta b{color:#cffafe}.np-assistant-safety{color:#fde68a!important}
 
@@ -107,7 +109,7 @@ def apply_portal_theme() -> None:
         @keyframes np-auth-stars{0%{background-position:0 0,18px 42px,65px 17px;transform:translate3d(-1.5%,0,0) rotate(-.4deg)}50%{background-position:78px 34px,-45px 115px,148px -29px;transform:translate3d(1.5%,-12px,0) rotate(.4deg)}100%{background-position:156px 6px,-108px 64px,231px 25px;transform:translate3d(-.5%,8px,0) rotate(-.2deg)}}
         @keyframes np-live-pulse{0%,100%{opacity:.72;transform:scale(.88)}50%{opacity:1;transform:scale(1.12)}}
         @media(max-width:720px){div[data-testid="stHorizontalBlock"]:has(.np-auth-card-marker){margin:1rem 0 2rem;display:block!important}div[data-testid="stHorizontalBlock"]:has(.np-auth-card-marker)>div:is([data-testid="column"],[data-testid="stColumn"]){display:none!important}div[data-testid="stHorizontalBlock"]:has(.np-auth-card-marker)>div:is([data-testid="column"],[data-testid="stColumn"]):has(.np-auth-card-marker){display:block!important;width:100%!important;max-width:none!important;padding:1.15rem!important;border-radius:20px}.np-auth-card-marker h1{font-size:1.9rem!important}.np-live-banner{grid-template-columns:1fr}.np-live-banner span{grid-row:auto}.np-live-banner strong,.np-live-banner small{padding-left:1.25rem}}
-        @media(prefers-reduced-motion:reduce){.stApp:has(.np-portal-marker):after,.np-auth-starfield:before,.np-auth-starfield:after,.np-live-banner i,.np-live-practitioner i{animation:none!important}}
+        @media(prefers-reduced-motion:reduce){.stApp:has(.np-portal-marker):after,.np-auth-starfield:before,.np-auth-starfield:after,.np-live-banner i,.np-live-practitioner i,.np-care-presence i{animation:none!important}}
         </style>
         """,
         unsafe_allow_html=True,

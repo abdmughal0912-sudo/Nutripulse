@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 import math
 import struct
 import wave
@@ -46,3 +47,34 @@ def message_sound_html(kind: str = "exchange") -> str:
         f'<source src="{message_sound_data_uri(kind)}" type="audio/wav">'
         "</audio>"
     )
+
+
+def speech_component_html(text: str, *, rate: float = 1.0, autoplay: bool = True) -> str:
+    """Build a browser-native text-to-speech component without external audio transfer."""
+    safe_text = json.dumps(str(text), ensure_ascii=False).replace("<", "\\u003c").replace(
+        ">", "\\u003e"
+    ).replace("&", "\\u0026")
+    safe_rate = min(1.35, max(0.75, float(rate)))
+    auto_call = "speakReply();" if autoplay else ""
+    return f"""
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{{margin:0;background:transparent;font-family:system-ui,sans-serif}}
+button{{width:100%;min-height:36px;border:1px solid rgba(165,243,252,.28);border-radius:12px;
+background:rgba(13,44,38,.92);color:#cffafe;font-weight:750;cursor:pointer}}
+</style></head><body>
+<button type="button" onclick="speakReply()">▶ Play latest voice reply</button>
+<script>
+const replyText = {safe_text};
+function speakReply() {{
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(replyText);
+  utterance.rate = {safe_rate:.2f};
+  utterance.pitch = 1.02;
+  utterance.volume = 0.95;
+  window.speechSynthesis.speak(utterance);
+}}
+{auto_call}
+</script></body></html>
+""".strip()

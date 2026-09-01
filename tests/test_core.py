@@ -10,7 +10,7 @@ from pathlib import Path
 
 from src.alerts import alert_counts, evaluate_alerts
 from src.assistant import assistant_reply
-from src.chat_audio import message_sound_data_uri
+from src.chat_audio import message_sound_data_uri, speech_component_html
 from src.constants import ASSET_DIR, DATA_DIR
 from src.database import (
     acknowledge_alert, add_clinical_note, add_clinical_prescription, add_food_log,
@@ -178,6 +178,13 @@ class NutritionTests(unittest.TestCase):
         sound = message_sound_data_uri("exchange")
         self.assertTrue(sound.startswith("data:audio/wav;base64,"))
         self.assertGreater(len(sound), 1000)
+
+    def test_browser_voice_component_escapes_untrusted_reply_text(self) -> None:
+        component = speech_component_html("Hello </script><script>alert(1)</script>")
+        self.assertIn("SpeechSynthesisUtterance", component)
+        self.assertIn("Play latest voice reply", component)
+        self.assertNotIn("</script><script>alert(1)</script>", component)
+        self.assertIn("\\u003c/script\\u003e", component)
 
     def test_plan_contains_seven_days(self) -> None:
         plan = generate_plan(profile(), parse_lab_text("HbA1c 6.0"))

@@ -10,10 +10,12 @@
 
 - Approved Dietitian portal activity now publishes a persistent heartbeat to assigned Customers only.
 - Assigned Customers see **DIETITIAN IS LIVE** as a portal banner, toast and Alert Center notification.
+- Customer Care Team shows **DIETITIAN IS LIVE** or **DIETITIAN IS OFFLINE** in a dedicated top-right status card.
 - Presence clears immediately on sign-out and expires after five minutes of inactivity when a browser closes unexpectedly.
 - NutriGuide now understands plan explanation, verified laboratory summaries, groceries, allergy-aware meal swaps, simple recipes and saved schedule progress.
 - Assistant responses include transparent intent, confidence, grounding and clinical-review metadata.
 - Optional short message chimes are disabled by default and require the Customer to enable them.
+- Optional real browser voice reads NutriGuide replies and announces new live, meal and critical alerts without uploading audio recordings.
 - Verified lab reports now generate genuinely different meal patterns and targets.
 - The latest saved report is restored automatically after restart or customer switching.
 - Every plan explains which values were used and how each one changed—or safely did not change—the plan.

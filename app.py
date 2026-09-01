@@ -12,10 +12,11 @@ import plotly.express as px
 import plotly.graph_objects as go
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 from src.alerts import alert_counts, evaluate_alerts
 from src.assistant import assistant_api_status, assistant_capabilities, assistant_reply
-from src.chat_audio import message_sound_html
+from src.chat_audio import message_sound_html, speech_component_html
 from src.auth import authenticate_with_status, hash_password, register_account, register_admin_account
 from src.constants import APP_NAME, APP_SUBTITLE, APP_VERSION, ASSET_DIR, DATA_DIR, SUPPORTED_LAB_TESTS
 from src.database import (
@@ -799,7 +800,10 @@ def session_setup() -> None:
             {"role": "assistant", "content": "Hello — I can explain this profile and laboratory-linked plan, build a grocery list, suggest allergy-aware meal swaps, create simple recipes, and summarize progress. I do not diagnose conditions or change medicines."}
         ]
         st.session_state.assistant_sound_enabled = False
+        st.session_state.assistant_voice_enabled = False
+        st.session_state.voice_alerts_enabled = False
         st.session_state.pending_chat_sound = None
+        st.session_state.pending_assistant_voice = None
         st.session_state.session_profile_id = active_profile_id
     st.session_state.setdefault("lab_results", [])
     st.session_state.setdefault("lab_safety", {"level": "wellness", "reasons": [], "can_generate": True})
@@ -825,7 +829,10 @@ def session_setup() -> None:
         {"role": "assistant", "content": "Hello — I can explain your profile and laboratory-linked plan, build a grocery list, suggest allergy-aware meal swaps, create simple recipes, and summarize progress. I do not diagnose conditions or change medicines."}
     ])
     st.session_state.setdefault("assistant_sound_enabled", False)
+    st.session_state.setdefault("assistant_voice_enabled", False)
+    st.session_state.setdefault("voice_alerts_enabled", False)
     st.session_state.setdefault("pending_chat_sound", None)
+    st.session_state.setdefault("pending_assistant_voice", None)
 
 
 session_setup()
@@ -868,6 +875,14 @@ def live_dietitian_watch() -> None:
         newly_live = [item for item in live if str(item["id"]) not in previous_ids]
         if newly_live:
             st.toast("DIETITIAN IS LIVE", icon="🟢")
+            if st.session_state.voice_alerts_enabled:
+                components.html(
+                    speech_component_html(
+                        "Your assigned dietitian is live. Open Care Team to send a secure message.",
+                        autoplay=True,
+                    ),
+                    height=0,
+                )
         if had_state:
             st.rerun()
     if not live:
@@ -912,6 +927,13 @@ def live_schedule_watch() -> None:
     if token not in notified:
         phrase = "is due soon" if difference >= 0 else "is waiting to be cleared"
         st.toast(f"Meal reminder: {meal['meal_name']} {phrase}.", icon="⏰")
+        if st.session_state.voice_alerts_enabled:
+            components.html(
+                speech_component_html(
+                    f"Meal reminder. {meal['meal_name']} {phrase}.", autoplay=True,
+                ),
+                height=0,
+            )
         notified.add(token)
         st.session_state.meal_popup_tokens = sorted(notified)
     st.sidebar.markdown(
@@ -957,6 +979,14 @@ def refresh_alert_state() -> list[dict]:
     new_critical = [item for item in current if item["severity"] == "Critical" and item["status"] == "Active" and item["signature"] not in notified]
     if new_critical:
         st.toast(f"Critical safety alert: {new_critical[0]['title']}", icon="🚨")
+        if st.session_state.voice_alerts_enabled:
+            components.html(
+                speech_component_html(
+                    "Critical NutriPulse safety alert. Open the Alert Center now and follow the clinical review guidance.",
+                    autoplay=True,
+                ),
+                height=0,
+            )
         notified.update(item["signature"] for item in new_critical)
         st.session_state.notified_critical_alerts = sorted(notified)
     return current
@@ -2871,6 +2901,28 @@ def render_care_team() -> None:
         "View your Administrator-assigned Dietitian, answer questions, receive recommendations and follow active nutrition prescriptions.",
     )
     linked = list_linked_dietitians(str(current_user["id"]))
+    live = list_live_dietitians_for_customer(str(current_user["id"]))
+    _, presence_column = st.columns([3, 1])
+    with presence_column:
+        if live:
+            live_names = " · ".join(html.escape(str(item["display_name"])) for item in live)
+            st.markdown(
+                '<div class="np-care-presence"><span><i></i>DIETITIAN IS LIVE</span>'
+                f'<small>{live_names}</small></div>',
+                unsafe_allow_html=True,
+            )
+        elif linked:
+            st.markdown(
+                '<div class="np-care-presence offline"><span><i></i>DIETITIAN IS OFFLINE</span>'
+                '<small>Send a message; your care team can reply later.</small></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<div class="np-care-presence offline"><span>CARE TEAM STATUS</span>'
+                '<small>No Dietitian is assigned.</small></div>',
+                unsafe_allow_html=True,
+            )
     if not linked:
         st.info("No Dietitian is assigned yet. The Administrator controls verified clinical assignments.")
         return
@@ -2954,6 +3006,10 @@ def render_assistant() -> None:
             st.caption("The advanced built-in assistant is active. A consent-gated external API can still be configured for an approved model endpoint.")
     with a3:
         st.toggle(
+            "Voice replies", key="assistant_voice_enabled",
+            help="Use your device's real browser voice to read NutriGuide replies. No voice recording is uploaded.",
+        )
+        st.toggle(
             "Message sounds", key="assistant_sound_enabled",
             help="Play a short optional chime after a message exchange. Browser autoplay rules may require one tap first.",
         )
@@ -2982,6 +3038,8 @@ def render_assistant() -> None:
         ])
         if st.session_state.assistant_sound_enabled:
             st.session_state.pending_chat_sound = "exchange"
+        if st.session_state.assistant_voice_enabled:
+            st.session_state.pending_assistant_voice = str(reply["answer"])
 
     quick_actions = [
         "Analyze my active diet plan",
@@ -3001,6 +3059,11 @@ def render_assistant() -> None:
     pending_sound = st.session_state.pop("pending_chat_sound", None)
     if pending_sound and st.session_state.assistant_sound_enabled:
         st.markdown(message_sound_html(str(pending_sound)), unsafe_allow_html=True)
+    pending_voice = st.session_state.pop("pending_assistant_voice", None)
+    if pending_voice and st.session_state.assistant_voice_enabled:
+        components.html(
+            speech_component_html(str(pending_voice), autoplay=True), height=0,
+        )
 
     for message in st.session_state.chat:
         with st.chat_message(message["role"]):
@@ -3016,6 +3079,14 @@ def render_assistant() -> None:
                     f'Grounded in: {html.escape(sources or "Customer profile")}</div>',
                     unsafe_allow_html=True,
                 )
+    last_assistant_reply = next(
+        (str(item["content"]) for item in reversed(st.session_state.chat) if item["role"] == "assistant"),
+        "",
+    )
+    if st.session_state.assistant_voice_enabled and last_assistant_reply:
+        components.html(
+            speech_component_html(last_assistant_reply, autoplay=False), height=42,
+        )
     if question := st.chat_input("Ask about your nutrition plan, food or safety checks…"):
         submit_assistant_prompt(question)
         st.rerun()
@@ -3426,6 +3497,11 @@ st.sidebar.markdown(
     f'<small>@{html.escape(str(current_user["username"]))}</small></div>',
     unsafe_allow_html=True,
 )
+if current_user["role"] == "Customer":
+    st.sidebar.toggle(
+        "Voice alerts", key="voice_alerts_enabled",
+        help="Speak new Dietitian-live, meal-reminder and critical safety alerts on this device.",
+    )
 if st.sidebar.button("Sign out", width="stretch"):
     if current_user["role"] == "Dietitian":
         clear_user_presence(str(current_user["id"]))

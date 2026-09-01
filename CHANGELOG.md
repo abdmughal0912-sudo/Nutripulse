@@ -8,6 +8,8 @@
 - Upgraded NutriGuide with plan/lab explanation, groceries, allergy-aware meal substitutions, plan-linked recipes and saved weekly-progress summaries.
 - Added transparent assistant intent, confidence, grounding and clinical-review metadata to Streamlit and FastAPI responses.
 - Added optional dependency-free message chimes, disabled by default, without loading third-party audio resources.
+- Added real browser text-to-speech for NutriGuide replies, replay control and opt-in spoken Dietitian-live, meal and critical alerts.
+- Added a top-right Customer Care Team status card that explicitly shows **DIETITIAN IS LIVE** or **DIETITIAN IS OFFLINE**.
 - Expanded automated regression coverage to presence expiry/isolation, live alerts, assistant actions and audio generation.
 
 ## 4.9.0 — 2026-08-31

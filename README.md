@@ -124,8 +124,8 @@ The launcher selects Python 3.12/3.11, creates `.venv`, installs requirements, s
 - Confirmed food diary and removal workflow.
 - Daily and week-by-week completion analytics, completed-week history, weight, hydration, waist, and adherence.
 - Customer Care Team for Dietitian connections, questionnaires, and secure messages.
-- Live assigned-Dietitian banner, toast and Alert Center notification with automatic inactivity expiry.
-- Advanced grounded NutriGuide for plans, labs, groceries, allergy-aware substitutions, recipes and schedule progress, plus optional message chimes and a consent-gated external API adapter.
+- Live assigned-Dietitian banner, toast, Alert Center notification and top-right Care Team live/offline status with automatic inactivity expiry.
+- Advanced grounded NutriGuide for plans, labs, groceries, allergy-aware substitutions, recipes and schedule progress, plus optional message chimes, real browser voice replies, spoken alerts and a consent-gated external API adapter.
 
 ### Dietitian
 
