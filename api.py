@@ -13,13 +13,15 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.alerts import alert_counts, evaluate_alerts
-from src.assistant import assistant_api_status, assistant_reply
+from src.import_compat import load_assistant_exports
 from src.constants import APP_NAME, APP_VERSION, ASSET_DIR, DATA_DIR
 from src.database import (
     acknowledge_alert, add_food_log, get_food_logs, initialize_database,
     get_schedule_progress, list_alerts, list_meal_schedule,
     set_meal_status_with_progress, upsert_profile,
 )
+
+assistant_api_status, _, assistant_reply = load_assistant_exports()
 from src.diet_engine import generate_plan
 from src.food_analysis import analyze_food_image
 from src.image_sources import RemoteImageError, fetch_public_image
