@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.10.2 — 2026-09-01
+
+- Added a source-fingerprint bootstrap that clears all cached NutriPulse submodules once after a Streamlit hot deployment.
+- Prevented additional stale-module startup failures such as missing current database presence functions.
+- Kept normal Streamlit interactions fast by skipping the refresh when application Python sources are unchanged.
+
 ## 4.10.1 — 2026-09-01
 
 - Added a guarded NutriGuide import loader for Streamlit hosts that retain older imported modules during a hot redeploy.
