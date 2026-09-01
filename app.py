@@ -15,7 +15,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from src.alerts import alert_counts, evaluate_alerts
-from src.assistant import assistant_api_status, assistant_capabilities, assistant_reply
+from src.import_compat import load_assistant_exports
 from src.chat_audio import message_sound_html, speech_component_html
 from src.auth import authenticate_with_status, hash_password, register_account, register_admin_account
 from src.constants import APP_NAME, APP_SUBTITLE, APP_VERSION, ASSET_DIR, DATA_DIR, SUPPORTED_LAB_TESTS
@@ -70,6 +70,8 @@ from src.database import (
     update_user_password,
     upsert_profile,
 )
+
+assistant_api_status, assistant_capabilities, assistant_reply = load_assistant_exports()
 from src.diet_engine import generate_plan, grocery_list
 from src.email_otp import (
     EmailDeliveryError, SmtpSettings, create_login_challenge, is_valid_email_address,
