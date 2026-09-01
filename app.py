@@ -14,6 +14,10 @@ import requests
 import streamlit as st
 import streamlit.components.v1 as components
 
+from src.runtime_refresh import refresh_project_modules
+
+refresh_project_modules()
+
 from src.alerts import alert_counts, evaluate_alerts
 from src.import_compat import load_assistant_exports
 from src.chat_audio import message_sound_html, speech_component_html
