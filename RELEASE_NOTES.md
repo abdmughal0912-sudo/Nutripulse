@@ -6,6 +6,8 @@
 
 **[Download the secured NutriPulse v4.10.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
+**[Read the complete project and implementation document](docs/NUTRIPULSE_COMPLETE_PROJECT_DOCUMENT.md)**
+
 ## Release highlights
 
 - Approved Dietitian portal activity now publishes a persistent heartbeat to assigned Customers only.
