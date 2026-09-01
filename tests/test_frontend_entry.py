@@ -86,6 +86,17 @@ class FrontendEntryTests(unittest.TestCase):
         ):
             self.assertIn(marker, APP_SOURCE)
 
+    def test_live_dietitian_and_advanced_assistant_are_visible_and_optional(self) -> None:
+        for marker in (
+            "dietitian_presence_heartbeat", "live_dietitian_watch", "DIETITIAN IS LIVE",
+            "list_live_dietitians_for_customer", "clear_user_presence",
+            "Build my grocery list", "Suggest an allergy-aware lunch swap",
+            "Summarize my weekly progress", "Message sounds", "pending_chat_sound",
+        ):
+            self.assertIn(marker, APP_SOURCE)
+        self.assertIn("np-live-banner", PORTAL_THEME_SOURCE)
+        self.assertIn("@keyframes np-live-pulse", PORTAL_THEME_SOURCE)
+
 
 if __name__ == "__main__":
     unittest.main()

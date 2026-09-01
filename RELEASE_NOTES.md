@@ -1,13 +1,19 @@
-# NutriPulse AI v4.9.0 — Release Notes
+# NutriPulse AI v4.10.0 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.9.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.10.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 ## Release highlights
 
+- Approved Dietitian portal activity now publishes a persistent heartbeat to assigned Customers only.
+- Assigned Customers see **DIETITIAN IS LIVE** as a portal banner, toast and Alert Center notification.
+- Presence clears immediately on sign-out and expires after five minutes of inactivity when a browser closes unexpectedly.
+- NutriGuide now understands plan explanation, verified laboratory summaries, groceries, allergy-aware meal swaps, simple recipes and saved schedule progress.
+- Assistant responses include transparent intent, confidence, grounding and clinical-review metadata.
+- Optional short message chimes are disabled by default and require the Customer to enable them.
 - Verified lab reports now generate genuinely different meal patterns and targets.
 - The latest saved report is restored automatically after restart or customer switching.
 - Every plan explains which values were used and how each one changed—or safely did not change—the plan.

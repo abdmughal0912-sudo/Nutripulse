@@ -71,6 +71,17 @@ def apply_portal_theme() -> None:
         .stApp:has(.np-portal-marker) .np-eyebrow,
         .stApp:has(.np-portal-marker) .np-section-kicker,
         .stApp:has(.np-portal-marker) .np-severity{font-size:.71rem!important}
+        .np-live-banner{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:.25rem 1rem;
+          margin:.35rem 0 1rem;padding:.9rem 1.05rem;border:1px solid rgba(190,242,100,.38);border-radius:18px;
+          background:linear-gradient(110deg,rgba(20,83,45,.88),rgba(8,47,43,.84),rgba(67,56,202,.20));
+          box-shadow:0 16px 46px rgba(16,185,129,.12),inset 0 1px 0 rgba(255,255,255,.10)}
+        .np-live-banner span{grid-row:1/3;display:flex;align-items:center;gap:.55rem;color:#d9f99d;font-size:.74rem;font-weight:900;letter-spacing:.13em}
+        .np-live-banner i,.np-live-practitioner i{width:.7rem;height:.7rem;border-radius:999px;background:#bef264;box-shadow:0 0 0 .28rem rgba(190,242,100,.12),0 0 18px #bef264;animation:np-live-pulse 1.8s ease-in-out infinite}
+        .np-live-banner strong{color:#fff;font-size:1rem}.np-live-banner small{color:#b8ccc5!important;font-size:.78rem!important}
+        .np-live-practitioner{display:flex;align-items:center;gap:.75rem;margin:.55rem 0 .9rem;padding:.75rem .8rem;border:1px solid rgba(190,242,100,.24);border-radius:15px;background:rgba(22,101,52,.18)}
+        .np-live-practitioner div{display:grid}.np-live-practitioner strong{color:#d9f99d;font-size:.72rem;letter-spacing:.09em}.np-live-practitioner small{color:#9fb7ae!important;font-size:.7rem!important}
+        .np-assistant-meta{margin:.2rem 0 .55rem;padding:.55rem .7rem;border-radius:12px;border:1px solid rgba(165,243,252,.15);background:rgba(165,243,252,.055);color:#a9c7bd;font-size:.75rem}
+        .np-assistant-meta b{color:#cffafe}.np-assistant-safety{color:#fde68a!important}
 
         .np-auth-starfield{position:fixed;z-index:0;inset:0;pointer-events:none;overflow:hidden;
           background:
@@ -94,8 +105,9 @@ def apply_portal_theme() -> None:
         div:is([data-testid="column"],[data-testid="stColumn"]):has(.np-auth-card-marker) .stButton>button{min-height:2.65rem}
         @keyframes np-portal-stars{0%{background-position:0 0,31px 48px,72px 19px,14px 96px;transform:translate3d(0,-8px,0)}50%{background-position:90px 34px,-25px 126px,145px -30px,-70px 162px;transform:translate3d(0,8px,0)}100%{background-position:180px 4px,-82px 72px,218px 34px,-154px 106px;transform:translate3d(0,-4px,0)}}
         @keyframes np-auth-stars{0%{background-position:0 0,18px 42px,65px 17px;transform:translate3d(-1.5%,0,0) rotate(-.4deg)}50%{background-position:78px 34px,-45px 115px,148px -29px;transform:translate3d(1.5%,-12px,0) rotate(.4deg)}100%{background-position:156px 6px,-108px 64px,231px 25px;transform:translate3d(-.5%,8px,0) rotate(-.2deg)}}
-        @media(max-width:720px){div[data-testid="stHorizontalBlock"]:has(.np-auth-card-marker){margin:1rem 0 2rem;display:block!important}div[data-testid="stHorizontalBlock"]:has(.np-auth-card-marker)>div:is([data-testid="column"],[data-testid="stColumn"]){display:none!important}div[data-testid="stHorizontalBlock"]:has(.np-auth-card-marker)>div:is([data-testid="column"],[data-testid="stColumn"]):has(.np-auth-card-marker){display:block!important;width:100%!important;max-width:none!important;padding:1.15rem!important;border-radius:20px}.np-auth-card-marker h1{font-size:1.9rem!important}}
-        @media(prefers-reduced-motion:reduce){.stApp:has(.np-portal-marker):after,.np-auth-starfield:before,.np-auth-starfield:after{animation:none!important}}
+        @keyframes np-live-pulse{0%,100%{opacity:.72;transform:scale(.88)}50%{opacity:1;transform:scale(1.12)}}
+        @media(max-width:720px){div[data-testid="stHorizontalBlock"]:has(.np-auth-card-marker){margin:1rem 0 2rem;display:block!important}div[data-testid="stHorizontalBlock"]:has(.np-auth-card-marker)>div:is([data-testid="column"],[data-testid="stColumn"]){display:none!important}div[data-testid="stHorizontalBlock"]:has(.np-auth-card-marker)>div:is([data-testid="column"],[data-testid="stColumn"]):has(.np-auth-card-marker){display:block!important;width:100%!important;max-width:none!important;padding:1.15rem!important;border-radius:20px}.np-auth-card-marker h1{font-size:1.9rem!important}.np-live-banner{grid-template-columns:1fr}.np-live-banner span{grid-row:auto}.np-live-banner strong,.np-live-banner small{padding-left:1.25rem}}
+        @media(prefers-reduced-motion:reduce){.stApp:has(.np-portal-marker):after,.np-auth-starfield:before,.np-auth-starfield:after,.np-live-banner i,.np-live-practitioner i{animation:none!important}}
         </style>
         """,
         unsafe_allow_html=True,

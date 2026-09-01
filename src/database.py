@@ -240,6 +240,14 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS user_presence (
+            user_id TEXT PRIMARY KEY,
+            last_seen_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS clinical_questionnaires (
             id TEXT PRIMARY KEY,
             dietitian_id TEXT NOT NULL,
@@ -704,6 +712,98 @@ def get_user_by_username(username: str, db_path: Path = DATABASE_PATH) -> dict[s
 def record_login(user_id: str, db_path: Path = DATABASE_PATH) -> None:
     with connection(db_path) as conn:
         conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (utc_now(), str(user_id)))
+
+
+def presence_ttl_seconds() -> int:
+    """Return the configured live-presence window with safe operational bounds."""
+    try:
+        configured = int(os.getenv("NUTRIPULSE_PRESENCE_TTL_SECONDS", "300") or 300)
+    except ValueError:
+        configured = 300
+    return min(1800, max(60, configured))
+
+
+def touch_dietitian_presence(
+    user_id: str, db_path: Path = DATABASE_PATH, *, seen_at: datetime | None = None,
+) -> bool:
+    """Record a heartbeat only for an active, approved Dietitian account."""
+    moment = seen_at or datetime.now(timezone.utc)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    timestamp = moment.astimezone(timezone.utc).isoformat(timespec="seconds")
+    with connection(db_path) as conn:
+        user = conn.execute(
+            """SELECT role, active, approval_status FROM users WHERE id = ?""",
+            (str(user_id),),
+        ).fetchone()
+        if (
+            not user
+            or str(user["role"]) != "Dietitian"
+            or not int(user["active"])
+            or str(user["approval_status"]) != "Approved"
+        ):
+            return False
+        conn.execute(
+            """INSERT INTO user_presence (user_id, last_seen_at, updated_at)
+               VALUES (?, ?, ?)
+               ON CONFLICT(user_id) DO UPDATE SET
+                   last_seen_at=excluded.last_seen_at,
+                   updated_at=excluded.updated_at""",
+            (str(user_id), timestamp, timestamp),
+        )
+    return True
+
+
+def clear_user_presence(user_id: str, db_path: Path = DATABASE_PATH) -> bool:
+    """Remove presence immediately on explicit sign-out; TTL handles closed tabs."""
+    with connection(db_path) as conn:
+        cursor = conn.execute(
+            "DELETE FROM user_presence WHERE user_id = ?", (str(user_id),),
+        )
+    return cursor.rowcount > 0
+
+
+def list_live_dietitians_for_customer(
+    customer_id: str, db_path: Path = DATABASE_PATH, *,
+    now: datetime | None = None, ttl_seconds: int | None = None,
+) -> list[dict[str, Any]]:
+    """Return live Dietitians linked to one customer, never another caseload."""
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    current = current.astimezone(timezone.utc)
+    ttl = presence_ttl_seconds() if ttl_seconds is None else max(1, int(ttl_seconds))
+    cutoff = current - timedelta(seconds=ttl)
+    with connection(db_path) as conn:
+        rows = conn.execute(
+            """SELECT users.id, users.username, users.display_name, users.email,
+                      users.credential, user_presence.last_seen_at
+               FROM dietitian_customer_links
+               JOIN users ON users.id = dietitian_customer_links.dietitian_id
+               JOIN user_presence ON user_presence.user_id = users.id
+               WHERE dietitian_customer_links.customer_id = ?
+                 AND dietitian_customer_links.status = 'Active'
+                 AND users.role = 'Dietitian'
+                 AND users.active = 1
+                 AND users.approval_status = 'Approved'
+               ORDER BY LOWER(users.display_name)""",
+            (str(customer_id),),
+        ).fetchall()
+    live: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        try:
+            last_seen = datetime.fromisoformat(str(item["last_seen_at"]).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            continue
+        if last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=timezone.utc)
+        if last_seen.astimezone(timezone.utc) < cutoff:
+            continue
+        item["is_live"] = True
+        item["seconds_since_seen"] = max(0, int((current - last_seen.astimezone(timezone.utc)).total_seconds()))
+        live.append(item)
+    return live
 
 
 def update_user_password(user_id: str, password_hash: str,
