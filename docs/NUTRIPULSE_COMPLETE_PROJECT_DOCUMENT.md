@@ -1,6 +1,6 @@
 # NutriPulse AI — Complete Project and Implementation Document
 
-**Application version:** 4.10.1
+**Application version:** 4.10.2
 
 **Document date:** 1 September 2026
 
