@@ -69,6 +69,21 @@
 - Added a conflict-safe utility for importing a private SQLite backup into PostgreSQL.
 - Updated all username, schedule and schema operations for PostgreSQL/SQLite compatibility.
 
+## 4.4.1 — 2026-08-30
+
+- Collapsed the Streamlit sidebar automatically on phones.
+- Stacked login, registration and verification forms safely on narrow screens.
+- Added horizontal tab scrolling and viewport containment for charts, images and dataframes.
+- Replaced missing SMTP exceptions with a readable configuration notice.
+
+## 4.4.0 — 2026-08-29
+
+- Added six-digit Gmail verification challenges with ten-minute expiry, five-attempt limit and a 60-second resend cooldown.
+- Required valid email enrollment for new Customer, Dietitian and Administrator registrations.
+- Added one-time email enrollment for legacy accounts without an address.
+- Kept SMTP credentials and the private Administrator setup code outside source control.
+- This release initially challenged every login; version 4.8.0 later replaced that behavior with one-time sign-up verification and recovery-only OTP.
+
 ## 4.3.0 — 2026-08-29
 
 - Added persistent active-day tracking derived from the saved SQLite meal schedule.
