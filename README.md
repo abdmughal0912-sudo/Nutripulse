@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="docs/NUTRIPULSE_COMPLETE_PROJECT_DOCUMENT.md"><strong>Read the complete project and implementation document</strong></a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/Streamlit-Application-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit application">
   <img src="https://img.shields.io/badge/FastAPI-REST_API-009688?logo=fastapi&logoColor=white" alt="FastAPI">
@@ -236,6 +240,8 @@ python scripts/ui_smoke_test.py
 ```
 
 The UI test renders every Customer, Dietitian and Administrator page. The smoke test checks Food Vision inference, the portable classifier, dataset integrity, alerts, plans, PDF/CSV/JSON exports and database persistence.
+
+The documentation regression check verifies that the complete written project document remains synchronized with the implemented authentication, persistent storage, laboratory planning, live Dietitian, Care Team, NutriGuide and voice features.
 
 ## GitHub
 
