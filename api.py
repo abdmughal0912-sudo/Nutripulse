@@ -12,6 +12,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.runtime_refresh import refresh_project_modules
+
+refresh_project_modules()
+
 from src.alerts import alert_counts, evaluate_alerts
 from src.import_compat import load_assistant_exports
 from src.constants import APP_NAME, APP_VERSION, ASSET_DIR, DATA_DIR
