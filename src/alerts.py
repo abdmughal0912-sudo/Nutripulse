@@ -51,6 +51,7 @@ def evaluate_alerts(
     model_health: dict[str, str] | None = None,
     meal_analysis: dict[str, Any] | None = None,
     meal_schedule: list[dict[str, Any]] | None = None,
+    live_dietitians: list[dict[str, Any]] | None = None,
     local_now: datetime | None = None,
 ) -> list[dict[str, Any]]:
     """Return transparent in-app alerts without diagnosing or prescribing.
@@ -124,6 +125,18 @@ def evaluate_alerts(
             "Recorded sensitivities: " + ", ".join(allergies) + ".",
             "Verify ingredient labels, restaurant preparation, substitutions, and cross-contact every time.",
             "Patient allergy profile",
+        ))
+
+    for dietitian in live_dietitians or []:
+        dietitian_id = str(dietitian.get("id") or dietitian.get("user_id") or "assigned")
+        display_name = str(dietitian.get("display_name") or "Your assigned Dietitian").strip()
+        credential = str(dietitian.get("credential") or "").strip()
+        identity = f"{display_name} · {credential}" if credential else display_name
+        alerts.append(_alert(
+            "Info", "Care team", "DIETITIAN IS LIVE",
+            f"{identity} is active in NutriPulse and available through your secure care workspace.",
+            "Open Care Team to send a question or review your current recommendations.",
+            f"Live assigned Dietitian: {dietitian_id}",
         ))
 
     if str(profile.get("medications", "")).strip():

@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.alerts import alert_counts, evaluate_alerts
-from src.assistant import answer_question, assistant_api_status
+from src.assistant import assistant_api_status, assistant_reply
 from src.constants import APP_NAME, APP_VERSION, ASSET_DIR, DATA_DIR
 from src.database import (
     acknowledge_alert, add_food_log, get_food_logs, initialize_database,
@@ -343,11 +343,17 @@ def api_assistant(payload: AssistantRequest) -> dict[str, Any]:
         labs = classify_manual_results([value.model_dump() for value in payload.labs]) if payload.labs else []
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    reply = assistant_reply(
+        payload.question, payload.profile.model_dump(), payload.plan, labs,
+        use_external=payload.use_external,
+    )
     return {
-        "answer": answer_question(
-            payload.question, payload.profile.model_dump(), payload.plan, labs,
-            use_external=payload.use_external,
-        ),
+        "answer": reply["answer"],
+        "intent": reply["intent"],
+        "confidence": reply["confidence"],
+        "grounding": reply["grounding"],
+        "clinical_review_required": reply["clinical_review_required"],
+        "suggested_actions": reply["suggested_actions"],
         "assistant": assistant_api_status(),
         "medical_scope": "Educational support only; not diagnosis, prescribing, or emergency care.",
     }

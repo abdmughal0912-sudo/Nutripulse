@@ -2,7 +2,7 @@
   <img src="assets/nutripulse_hero.jpg" alt="NutriPulse AI nutrition intelligence platform" width="100%">
 </p>
 
-<h1 align="center">NutriPulse AI v4.9.0</h1>
+<h1 align="center">NutriPulse AI v4.10.0</h1>
 
 <p align="center">
   <strong>AI-assisted nutrition intelligence, clinical collaboration and longitudinal diet-plan monitoring.</strong>
@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/Streamlit-Application-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit application">
   <img src="https://img.shields.io/badge/FastAPI-REST_API-009688?logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Release-v4.9.0-6A5ACD" alt="Release v4.9.0">
+  <img src="https://img.shields.io/badge/Release-v4.10.0-6A5ACD" alt="Release v4.10.0">
   <img src="https://img.shields.io/badge/Source_rows-76%2C920-16423C" alt="76,920 audited source rows">
 </p>
 
@@ -21,14 +21,14 @@
     <img src="https://img.shields.io/badge/Open-Live_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Open the NutriPulse AI live app">
   </a>
   <a href="https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip">
-    <img src="https://img.shields.io/badge/Download-NutriPulse_v4.9.0-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.9.0">
+    <img src="https://img.shields.io/badge/Download-NutriPulse_v4.10.0-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.10.0">
   </a>
   <a href="RELEASE_NOTES.md">
     <img src="https://img.shields.io/badge/View-Release_Notes-1F6FEB?style=for-the-badge" alt="View release notes">
   </a>
 </p>
 
-NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, persistent PostgreSQL or local SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.9.0 uses one-time email verification during sign-up, keeps verified logins password-only, retains secure Gmail password recovery, and fits the complete interface across mobile, laptop and desktop screens. It preserves reboot-safe cloud accounts, automatic day/week progression, analytics and separated Customer, Dietitian and Administrator workspaces. Verified laboratory reports now persist across sessions and produce report-specific meals, targets and auditable clinical-planning explanations. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
+NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, persistent PostgreSQL or local SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.10.0 adds caseload-scoped Dietitian live presence and an advanced grounded NutriGuide with groceries, substitutions, recipes, progress summaries and optional message chimes. It retains one-time email verification during sign-up, password-only verified login, secure Gmail password recovery, reboot-safe accounts, automatic day/week progression, responsive role-separated workspaces and report-specific clinical-planning explanations. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
 
 **Live application:** [NutriPulse AI — Nutrition Analyzer & Dietitian Platform](https://nutripulse-ai.streamlit.app/)
 
@@ -58,7 +58,7 @@ NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, p
 
 GitHub generates a clean ZIP package directly from the secured <code>main</code> branch:
 
-**[Download NutriPulse AI v4.9.0](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download NutriPulse AI v4.10.0](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 The package includes the application, API, audited public data indexes, portable classifier, Food Vision model, launchers, documentation and tests. It excludes passwords, API keys, runtime databases, Customer records, <code>.env</code>, Streamlit secrets and the private person-level row registry.
 
@@ -124,13 +124,15 @@ The launcher selects Python 3.12/3.11, creates `.venv`, installs requirements, s
 - Confirmed food diary and removal workflow.
 - Daily and week-by-week completion analytics, completed-week history, weight, hydration, waist, and adherence.
 - Customer Care Team for Dietitian connections, questionnaires, and secure messages.
-- NutriGuide built-in assistant plus optional consent-gated external API adapter.
+- Live assigned-Dietitian banner, toast, Alert Center notification and top-right Care Team live/offline status with automatic inactivity expiry.
+- Advanced grounded NutriGuide for plans, labs, groceries, allergy-aware substitutions, recipes and schedule progress, plus optional message chimes, real browser voice replies, spoken alerts and a consent-gated external API adapter.
 
 ### Dietitian
 
 - Dedicated professional application with registration/license details.
 - Inactive-until-approved account status and automatic clinical-portal routing after login.
 - Assigned-caseload dashboard and customer selector; no Customer pages in Dietitian navigation.
+- Live presence heartbeat visible only to assigned Customers, cleared on sign-out and expired automatically after inactivity.
 - Customer vitals, BMI, conditions, allergies, alert feed, weight trend, daily completion and week-by-week adherence.
 - Complete food diary review with daily calorie and macro totals.
 - Laboratory report analysis, safety-gated Dietitian plan generation and full plan history.
@@ -223,7 +225,7 @@ NUTRIPULSE_ASSISTANT_API_URL=https://approved-service.example/ask
 NUTRIPULSE_ASSISTANT_API_KEY=replace-with-secret
 ```
 
-External transfer is disabled until the Customer explicitly selects the consent checkbox and toggle. The adapter sends a minimized nutrition context and preserves no-diagnosis/no-prescribing boundaries.
+External transfer is disabled until the Customer explicitly selects the consent checkbox and toggle. The adapter sends a minimized nutrition context and preserves no-diagnosis/no-prescribing boundaries. The built-in advanced assistant remains available without an external model and returns transparent intent, confidence, grounding and clinical-review metadata.
 
 ## Tests
 

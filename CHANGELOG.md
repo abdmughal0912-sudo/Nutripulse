@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.10.0 — 2026-09-01
+
+- Added approved-Dietitian live presence with a 60-second authenticated heartbeat and configurable five-minute inactivity window.
+- Restricted presence visibility to active Administrator-assigned caseload links; unrelated Customers never receive another Dietitian's status.
+- Added **DIETITIAN IS LIVE** customer banner, toast and persistent Alert Center state, with immediate explicit sign-out clearing.
+- Upgraded NutriGuide with plan/lab explanation, groceries, allergy-aware meal substitutions, plan-linked recipes and saved weekly-progress summaries.
+- Added transparent assistant intent, confidence, grounding and clinical-review metadata to Streamlit and FastAPI responses.
+- Added optional dependency-free message chimes, disabled by default, without loading third-party audio resources.
+- Added real browser text-to-speech for NutriGuide replies, replay control and opt-in spoken Dietitian-live, meal and critical alerts.
+- Added a top-right Customer Care Team status card that explicitly shows **DIETITIAN IS LIVE** or **DIETITIAN IS OFFLINE**.
+- Expanded automated regression coverage to presence expiry/isolation, live alerts, assistant actions and audio generation.
+
 ## 4.9.0 — 2026-08-31
 
 - Added report-specific clinical nutrition strategies that change meal choices, macro targets, fibre targets and preparation guidance from verified laboratory findings and customer conditions.

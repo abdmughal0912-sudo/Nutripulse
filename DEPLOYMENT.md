@@ -1,4 +1,4 @@
-# NutriPulse v4.9.0 deployment
+# NutriPulse v4.10.0 deployment
 
 ## Local Windows deployment
 
@@ -18,6 +18,7 @@ NUTRIPULSE_SMTP_USERNAME=your-sender@gmail.com
 NUTRIPULSE_SMTP_PASSWORD=<Google App Password, not the normal Gmail password>
 NUTRIPULSE_SMTP_SENDER_EMAIL=your-sender@gmail.com
 NUTRIPULSE_SMTP_SENDER_NAME=NutriPulse AI
+NUTRIPULSE_PRESENCE_TTL_SECONDS=300
 ```
 
 Email verification is mandatory once during sign-up and for password recovery;
@@ -68,6 +69,7 @@ Optional paths:
 | `NUTRIPULSE_ASSET_DIR` | Asset directory | `assets` |
 | `NUTRIPULSE_API_URL` | API URL shown by Streamlit | `http://127.0.0.1:8000` |
 | `NUTRIPULSE_SCRAPER_DOMAINS` | Extra allowlisted evidence domains | empty |
+| `NUTRIPULSE_PRESENCE_TTL_SECONDS` | Assigned-Dietitian live window after the last portal heartbeat | `300` (bounded to 60–1800) |
 
 ## Docker Compose
 
@@ -96,6 +98,7 @@ The named volume stores the SQLite database. Back it up before upgrades.
 - Define customer consent, data-retention, correction, export, and deletion procedures.
 - Validate laboratory thresholds, diet constraints, alert language, and escalation workflows with qualified local clinicians.
 - Treat external assistant configuration as a separate processor/vendor review; keep it disabled until approved.
+- Treat Dietitian presence as availability information, not an emergency-response guarantee; the default live state expires five minutes after the last authenticated heartbeat.
 - Add centralized audit logging, rate limiting, monitoring, and incident response before real clinical use.
 - Never treat Food Vision or the classifier as a diagnostic system.
 

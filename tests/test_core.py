@@ -5,19 +5,23 @@ import json
 import tempfile
 import unittest
 from unittest.mock import patch
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from src.alerts import alert_counts, evaluate_alerts
+from src.assistant import assistant_reply
+from src.chat_audio import message_sound_data_uri, speech_component_html
 from src.constants import ASSET_DIR, DATA_DIR
 from src.database import (
     acknowledge_alert, add_clinical_note, add_clinical_prescription, add_food_log,
-    create_meal_schedule, create_questionnaire,
+    clear_user_presence, create_meal_schedule, create_questionnaire,
     create_user, delete_food_log, get_food_logs, get_schedule_progress, initialize_database,
     link_dietitian_customer, list_alerts, list_clinical_messages, list_clinical_notes,
     list_clinical_prescriptions, list_lab_reports, list_meal_schedule, list_questionnaires,
+    list_live_dietitians_for_customer,
     load_profile, save_lab_report, save_plan, send_clinical_message, set_dietitian_approval,
-    set_meal_status, set_meal_status_with_progress, submit_questionnaire, sync_alerts, upsert_profile,
+    set_meal_status, set_meal_status_with_progress, submit_questionnaire, sync_alerts,
+    touch_dietitian_presence, upsert_profile,
 )
 from src.auth import hash_password, verify_password
 from src.diet_engine import generate_plan
@@ -137,6 +141,50 @@ class NutritionTests(unittest.TestCase):
             "meal_name": "Lunch", "status": "Planned",
         }], local_now=datetime(2026, 8, 27, 12, 45, tzinfo=timezone.utc))
         self.assertTrue(any("due" in item["title"].lower() for item in alerts))
+
+    def test_live_dietitian_creates_exact_customer_notification(self) -> None:
+        alerts = evaluate_alerts(profile(), live_dietitians=[{
+            "id": "dietitian-live-1", "display_name": "Dietitian One", "credential": "RD-001",
+        }])
+        live_alert = next(item for item in alerts if item["category"] == "Care team")
+        self.assertEqual(live_alert["title"], "DIETITIAN IS LIVE")
+        self.assertIn("Dietitian One", live_alert["message"])
+        self.assertEqual(live_alert["severity"], "Info")
+
+    def test_advanced_assistant_supports_groceries_progress_and_safety(self) -> None:
+        patient = profile()
+        patient["allergies"] = ["Tree nuts"]
+        plan = generate_plan(patient, parse_lab_text("LDL cholesterol 178"))
+        groceries = assistant_reply("Build my grocery list", patient, plan, [])
+        self.assertEqual(groceries["intent"], "grocery_list")
+        self.assertIn("grocery list", groceries["answer"].lower())
+        self.assertIn("cross-contact", groceries["answer"].lower())
+
+        progress = assistant_reply(
+            "Summarize my weekly progress", patient, plan, [],
+            progress={
+                "active_week_number": 2, "active_date": "2026-09-01", "completed_weeks": 1,
+                "days": [{"scheduled_date": "2026-09-01", "completed": 3, "total": 4}],
+            },
+        )
+        self.assertEqual(progress["intent"], "progress_summary")
+        self.assertIn("3/4", progress["answer"])
+
+        renal = assistant_reply("Make a potassium kidney diet", patient, plan, parse_lab_text("Potassium 6.5"))
+        self.assertTrue(renal["clinical_review_required"])
+        self.assertEqual(renal["intent"], "renal_safety")
+
+    def test_optional_chat_chime_is_embedded_without_external_media(self) -> None:
+        sound = message_sound_data_uri("exchange")
+        self.assertTrue(sound.startswith("data:audio/wav;base64,"))
+        self.assertGreater(len(sound), 1000)
+
+    def test_browser_voice_component_escapes_untrusted_reply_text(self) -> None:
+        component = speech_component_html("Hello </script><script>alert(1)</script>")
+        self.assertIn("SpeechSynthesisUtterance", component)
+        self.assertIn("Play latest voice reply", component)
+        self.assertNotIn("</script><script>alert(1)</script>", component)
+        self.assertIn("\\u003c/script\\u003e", component)
 
     def test_plan_contains_seven_days(self) -> None:
         plan = generate_plan(profile(), parse_lab_text("HbA1c 6.0"))
@@ -376,6 +424,44 @@ class DatabaseTests(unittest.TestCase):
             self.assertTrue(set_meal_status(meals[0]["id"], customer["id"], "Completed", db_path))
             refreshed = list_meal_schedule(customer["id"], plan_id=plan_id, db_path=db_path)
             self.assertEqual(refreshed[0]["status"], "Completed")
+
+    def test_live_presence_is_current_and_caseload_scoped(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            db_path = Path(directory) / "presence.db"
+            initialize_database(db_path)
+            customer_one = create_user(
+                "presence_customer_1", hash_password("Customer123"), "Customer", "Customer One",
+                db_path=db_path,
+            )
+            customer_two = create_user(
+                "presence_customer_2", hash_password("Customer123"), "Customer", "Customer Two",
+                db_path=db_path,
+            )
+            dietitian = create_user(
+                "presence_dietitian", hash_password("Dietitian123"), "Dietitian", "Dietitian Live",
+                credential="RD-LIVE", db_path=db_path, approval_status="Approved",
+            )
+            link_dietitian_customer(dietitian["id"], customer_one["id"], db_path)
+            now = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+            self.assertTrue(touch_dietitian_presence(dietitian["id"], db_path, seen_at=now))
+
+            live_for_one = list_live_dietitians_for_customer(
+                customer_one["id"], db_path, now=now + timedelta(seconds=30), ttl_seconds=300,
+            )
+            self.assertEqual([item["id"] for item in live_for_one], [dietitian["id"]])
+            self.assertEqual(
+                list_live_dietitians_for_customer(
+                    customer_two["id"], db_path, now=now + timedelta(seconds=30), ttl_seconds=300,
+                ),
+                [],
+            )
+            self.assertEqual(
+                list_live_dietitians_for_customer(
+                    customer_one["id"], db_path, now=now + timedelta(seconds=301), ttl_seconds=300,
+                ),
+                [],
+            )
+            self.assertTrue(clear_user_presence(dietitian["id"], db_path))
 
     def test_schedule_advances_day_and_creates_next_week(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
