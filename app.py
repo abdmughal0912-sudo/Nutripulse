@@ -35,9 +35,12 @@ from src.database import (
     clear_user_presence,
     database_backend,
     delete_food_log,
+    ensure_schedule_window,
     get_food_logs,
     get_measurements,
     get_schedule_progress,
+    get_user_by_email,
+    get_user_preferences,
     get_user_by_username,
     has_admin,
     initialize_database,
@@ -71,6 +74,7 @@ from src.database import (
     submit_questionnaire,
     sync_alerts,
     touch_dietitian_presence,
+    update_user_preferences,
     update_user_password,
     upsert_profile,
 )
@@ -86,6 +90,7 @@ from src.food_analysis import analyze_food_image
 from src.image_sources import RemoteImageError, fetch_public_image
 from src.lab_analyzer import assess_safety, classify_manual_results, extract_text_from_upload, parse_lab_text
 from src.landing_theme import apply_landing_theme
+from src.local_time import local_now, local_today, local_week_start
 from src.portal_theme import apply_portal_theme
 from src.ml_engine import food_vision_status, model_status, predict_quality, train_quality_model
 from src.nutrition import (
@@ -175,6 +180,7 @@ PENDING_SIGNUP_KEYS = (
 )
 PASSWORD_RESET_KEYS = (
     "password_reset_active", "password_reset_user", "password_reset_email",
+    "password_reset_email_address",
     "password_reset_otp", "password_reset_error",
 )
 
@@ -235,7 +241,7 @@ def deliver_password_reset_code(user: dict) -> None:
 def render_password_reset() -> None:
     st.markdown(
         '<div class="np-reset-heading"><span>ACCOUNT RECOVERY</span>'
-        '<h3>Reset your password</h3><p>We will verify your registered Gmail address before changing anything.</p></div>',
+        '<h3>Reset your password</h3><p>Enter your registered email, then verify the code before changing anything.</p></div>',
         unsafe_allow_html=True,
     )
     reset_user = st.session_state.get("password_reset_user")
@@ -246,14 +252,20 @@ def render_password_reset() -> None:
 
     if not reset_user or not challenge:
         with st.form("password_reset_request"):
-            reset_username = st.text_input("Registered username", key="password_reset_username")
+            reset_email = st.text_input(
+                "Registered email", key="password_reset_email_address",
+                placeholder="name@example.com",
+            )
             request_code = st.form_submit_button(
                 "Send password reset code", type="primary", width="stretch",
             )
         if request_code:
-            user = get_user_by_username(reset_username)
+            user = get_user_by_email(reset_email)
             try:
-                if not user or not int(user.get("active", 0)):
+                if (
+                    not user or not int(user.get("active", 0))
+                    or not str(user.get("email_verified_at") or "").strip()
+                ):
                     raise ValueError("No active account with a verified recovery email was found.")
                 deliver_password_reset_code(user)
                 st.rerun()
@@ -317,7 +329,7 @@ def render_password_reset() -> None:
 def render_signup_verification(user: dict) -> None:
     st.subheader("Verify your new account")
     st.caption(
-        "Enter the six-digit code once to complete sign-up. Future logins use only your username and password."
+        "Enter the six-digit code once to complete sign-up. Future logins accept your email or username with your password."
     )
     stored_email = str(user.get("email", "")).strip().lower()
     challenge = st.session_state.get("signup_otp")
@@ -363,7 +375,7 @@ def render_signup_verification(user: dict) -> None:
                     )
                 else:
                     st.session_state.signup_verification_notice = (
-                        "Account verified. You can now sign in with your username and password."
+                        "Account verified. You can now sign in with your email or username and password."
                     )
                 st.rerun()
             else:
@@ -566,16 +578,19 @@ def render_authentication() -> None:
                 render_password_reset()
             else:
                 st.caption(
-                    "Use your username and password. OTP is required only for sign-up and password recovery."
+                    "Use your registered email or username and password. OTP is required only for sign-up and password recovery."
                 )
                 with st.form("account_login"):
-                    username = st.text_input("Username", key="login_username")
+                    login_identifier = st.text_input(
+                        "Email or username", key="login_identifier",
+                        placeholder="name@example.com or username",
+                    )
                     password = st.text_input("Password", type="password", key="login_password")
                     submitted = st.form_submit_button(
                         "Enter NutriPulse", type="primary", width="stretch",
                     )
                 if submitted:
-                    user, message = authenticate_with_status(username, password)
+                    user, message = authenticate_with_status(login_identifier, password)
                     if user:
                         if "verification required" in message.lower():
                             clear_pending_signup()
@@ -773,6 +788,13 @@ def cached_web_article(url: str) -> dict:
 
 
 def session_setup() -> None:
+    preference_user_id = str(current_user["id"])
+    if st.session_state.get("audio_preference_user_id") != preference_user_id:
+        preferences = get_user_preferences(preference_user_id)
+        st.session_state.assistant_sound_enabled = preferences["message_sounds"]
+        st.session_state.assistant_voice_enabled = preferences["voice_replies"]
+        st.session_state.voice_alerts_enabled = preferences["voice_alerts"]
+        st.session_state.audio_preference_user_id = preference_user_id
     profile_changed = st.session_state.get("session_profile_id") != active_profile_id
     if profile_changed:
         fallback_name = str(current_user["display_name"])
@@ -805,9 +827,6 @@ def session_setup() -> None:
         st.session_state.chat = [
             {"role": "assistant", "content": "Hello — I can explain this profile and laboratory-linked plan, build a grocery list, suggest allergy-aware meal swaps, create simple recipes, and summarize progress. I do not diagnose conditions or change medicines."}
         ]
-        st.session_state.assistant_sound_enabled = False
-        st.session_state.assistant_voice_enabled = False
-        st.session_state.voice_alerts_enabled = False
         st.session_state.pending_chat_sound = None
         st.session_state.pending_assistant_voice = None
         st.session_state.session_profile_id = active_profile_id
@@ -839,6 +858,21 @@ def session_setup() -> None:
     st.session_state.setdefault("voice_alerts_enabled", False)
     st.session_state.setdefault("pending_chat_sound", None)
     st.session_state.setdefault("pending_assistant_voice", None)
+    if st.session_state.plan_id:
+        ensure_schedule_window(
+            active_profile_id, st.session_state.plan_id,
+            reference_date=local_today().isoformat(), weeks_ahead=1,
+        )
+
+
+def persist_audio_preferences(user_id: str) -> None:
+    """Save opt-in audio controls until this account changes them again."""
+    update_user_preferences(
+        user_id,
+        voice_alerts=bool(st.session_state.get("voice_alerts_enabled", False)),
+        voice_replies=bool(st.session_state.get("assistant_voice_enabled", False)),
+        message_sounds=bool(st.session_state.get("assistant_sound_enabled", False)),
+    )
 
 
 session_setup()
@@ -907,8 +941,7 @@ if current_user["role"] == "Customer":
 
 @st.fragment(run_every="60s")
 def live_schedule_watch() -> None:
-    offset = float(os.getenv("NUTRIPULSE_UTC_OFFSET_HOURS", "5") or 5)
-    now = datetime.now(timezone(timedelta(hours=offset)))
+    now = local_now()
     meals = list_meal_schedule(
         active_profile_id, date_from=now.date().isoformat(), date_to=now.date().isoformat(),
     )
@@ -955,9 +988,10 @@ if current_user["role"] == "Customer" or linked_customers:
 
 def refresh_alert_state() -> list[dict]:
     energy = calculate_energy(profile)
-    today_logs = get_food_logs(active_profile_id, date.today().isoformat())
+    today = local_today()
+    today_logs = get_food_logs(active_profile_id, today.isoformat())
     measurements = get_measurements(active_profile_id)
-    week_start = date.today() - timedelta(days=date.today().weekday())
+    week_start = today - timedelta(days=today.weekday())
     schedule = list_meal_schedule(
         active_profile_id, date_from=week_start.isoformat(),
         date_to=(week_start + timedelta(days=6)).isoformat(),
@@ -1203,7 +1237,8 @@ def render_schedule_rows(schedule: list[dict], key_prefix: str, *, interactive: 
 def render_dashboard() -> None:
     energy = calculate_energy(profile)
     bmi, bmi_label = calculate_bmi(profile["weight_kg"], profile["height_cm"])
-    logs = get_food_logs(active_profile_id, date.today().isoformat())
+    today = local_today()
+    logs = get_food_logs(active_profile_id, today.isoformat())
     consumed = sum(row["calories"] for row in logs)
     protein = sum(row["protein_g"] for row in logs)
     fibre = sum(row["fiber_g"] for row in logs)
@@ -1230,8 +1265,11 @@ def render_dashboard() -> None:
     st.progress(min(1.0, consumed / energy["target_calories"] if energy["target_calories"] else 0), text="Daily energy progress")
     render_alert_preview(current_alerts, limit=2)
 
-    plan_progress = get_schedule_progress(active_profile_id, st.session_state.plan_id)
-    active_schedule_date = plan_progress.get("active_date") or date.today().isoformat()
+    plan_progress = get_schedule_progress(
+        active_profile_id, st.session_state.plan_id,
+        active_on_or_after=today.isoformat(),
+    )
+    active_schedule_date = plan_progress.get("active_date") or today.isoformat()
     today_schedule = list_meal_schedule(
         active_profile_id, date_from=active_schedule_date, date_to=active_schedule_date,
         plan_id=st.session_state.plan_id,
@@ -1266,21 +1304,31 @@ def render_dashboard() -> None:
         fig.update_traces(textinfo="percent", hovertemplate="%{label}: %{value:.1f}g<extra></extra>")
         st.plotly_chart(plot_layout(fig, 260), width="stretch", config={"displayModeBar": False})
         st.markdown("</div>", unsafe_allow_html=True)
-    week_start = date.today() - timedelta(days=date.today().weekday())
-    history_start = week_start - timedelta(days=21)
-    future_end = week_start + timedelta(days=20)
+    history_start = today - timedelta(days=6)
+    future_end = today + timedelta(days=13)
     schedule_window = list_meal_schedule(
         active_profile_id, date_from=history_start.isoformat(), date_to=future_end.isoformat(),
     )
     if schedule_window:
         schedule_frame = pd.DataFrame(schedule_window)
         schedule_frame["scheduled_date"] = pd.to_datetime(schedule_frame["scheduled_date"])
-        daily = schedule_frame.groupby(["scheduled_date", "status"]).size().reset_index(name="Meals")
-        fig = px.bar(
-            daily, x="scheduled_date", y="Meals", color="status", barmode="stack",
-            title="Past records and future meal schedule",
-            color_discrete_map={"Completed": "#b9f06a", "Planned": "#5ce0d0", "Skipped": "#ffb86b"},
+        schedule_frame["display_status"] = schedule_frame["status"]
+        overdue = (
+            (schedule_frame["scheduled_date"].dt.date < today)
+            & (schedule_frame["status"] == "Planned")
         )
+        schedule_frame.loc[overdue, "display_status"] = "Past planned"
+        daily = schedule_frame.groupby(["scheduled_date", "display_status"]).size().reset_index(name="Meals")
+        fig = px.bar(
+            daily, x="scheduled_date", y="Meals", color="display_status", barmode="stack",
+            title="Recent records, today and upcoming meal schedule",
+            labels={"display_status": "status"},
+            color_discrete_map={
+                "Completed": "#b9f06a", "Planned": "#5ce0d0",
+                "Past planned": "#8aa39d", "Skipped": "#ffb86b",
+            },
+        )
+        fig.add_vline(x=pd.Timestamp(today), line_dash="dot", line_color="#f7d774")
         st.plotly_chart(plot_layout(fig, 290), width="stretch", config={"displayModeBar": False})
     if any(item["severity"] == "Critical" and item["status"] == "Active" for item in current_alerts):
         st.error("A critical safety gate is active. Open Alert Center and Laboratory Intelligence before generating or changing a plan.")
@@ -1549,7 +1597,7 @@ def render_plan() -> None:
         try:
             plan = generate_plan(profile, st.session_state.lab_results)
             plan_id = save_plan(active_profile_id, plan, st.session_state.lab_report_id)
-            week_start = date.today() - timedelta(days=date.today().weekday())
+            week_start = local_week_start()
             create_meal_schedule(active_profile_id, plan_id, plan, week_start.isoformat())
             st.session_state.plan = plan
             st.session_state.plan_id = plan_id
@@ -1561,7 +1609,7 @@ def render_plan() -> None:
         try:
             plan = generate_plan(profile, [])
             plan_id = save_plan(active_profile_id, plan)
-            week_start = date.today() - timedelta(days=date.today().weekday())
+            week_start = local_week_start()
             create_meal_schedule(active_profile_id, plan_id, plan, week_start.isoformat())
             st.session_state.plan = plan
             st.session_state.plan_id = plan_id
@@ -1615,7 +1663,10 @@ def render_plan() -> None:
     notice = st.session_state.pop("schedule_transition_notice", None)
     if notice:
         st.success(str(notice))
-    progress = get_schedule_progress(active_profile_id, st.session_state.plan_id)
+    progress = get_schedule_progress(
+        active_profile_id, st.session_state.plan_id,
+        active_on_or_after=local_today().isoformat(),
+    )
     saved_schedule = list_meal_schedule(
         active_profile_id, plan_id=st.session_state.plan_id,
     ) if st.session_state.plan_id else []
@@ -1792,7 +1843,7 @@ def _render_vision_diary_legacy() -> None:
                 else:
                     st.warning(prediction.get("message", "Nutrition classifier unavailable."))
                 if st.button("Add confirmed record to diary", type="primary", width="stretch"):
-                    add_food_log(active_profile_id, date.today().isoformat(), meal, selected_food, servings)
+                    add_food_log(active_profile_id, local_today().isoformat(), meal, selected_food, servings)
                     st.success("Confirmed food added to today's diary.")
                     st.rerun()
         with custom_tab:
@@ -1822,10 +1873,10 @@ def _render_vision_diary_legacy() -> None:
                         "carbs_g": custom_carbs, "fat_g": custom_fat, "fiber_g": custom_fiber,
                         "sugar_g": 0.0, "sodium_mg": 0.0,
                     }
-                    add_food_log(active_profile_id, date.today().isoformat(), custom_meal, custom_food, custom_servings)
+                    add_food_log(active_profile_id, local_today().isoformat(), custom_meal, custom_food, custom_servings)
                     st.success("Custom dish added. Sugar and sodium remain zero because they were not supplied.")
                     st.rerun()
-    logs = get_food_logs(active_profile_id, date.today().isoformat())
+    logs = get_food_logs(active_profile_id, local_today().isoformat())
     if logs:
         st.subheader("Today’s food diary")
         log_frame = pd.DataFrame(logs)
@@ -2099,7 +2150,7 @@ def render_vision_diary() -> None:
             if prediction.get("status") == "ready":
                 render_quality_result(prediction, selected_name, selected_food)
             if st.button("Add confirmed food to today’s diary", type="primary", width="stretch", key="add_confirmed_vision_food"):
-                add_food_log(active_profile_id, date.today().isoformat(), meal, selected_food, servings)
+                add_food_log(active_profile_id, local_today().isoformat(), meal, selected_food, servings)
                 st.success("Confirmed food added to today’s diary.")
                 st.rerun()
     with custom_tab:
@@ -2128,11 +2179,11 @@ def render_vision_diary() -> None:
                     "carbs_g": custom_carbs, "fat_g": custom_fat, "fiber_g": custom_fiber,
                     "sugar_g": custom_sugar, "sodium_mg": custom_sodium,
                 }
-                add_food_log(active_profile_id, date.today().isoformat(), custom_meal, custom_food, custom_servings)
+                add_food_log(active_profile_id, local_today().isoformat(), custom_meal, custom_food, custom_servings)
                 st.success("Custom dish added to today’s diary.")
                 st.rerun()
 
-    logs = get_food_logs(active_profile_id, date.today().isoformat())
+    logs = get_food_logs(active_profile_id, local_today().isoformat())
     if logs:
         st.subheader("Today’s food diary")
         log_frame = pd.DataFrame(logs)
@@ -2206,7 +2257,7 @@ def render_progress() -> None:
     hero("Longitudinal monitoring", "Progress that shows<br><em>the pattern, not just the number.</em>", "Track weight, waist, hydration and plan adherence over time in the configured application database.")
     with st.form("measurement_form"):
         c1, c2, c3, c4, c5 = st.columns(5)
-        measured_on = c1.date_input("Date", date.today())
+        measured_on = c1.date_input("Date", local_today())
         weight = c2.number_input("Weight (kg)", 30.0, 300.0, float(profile["weight_kg"]), .1)
         waist = c3.number_input("Waist (cm)", 0.0, 250.0, 0.0, .5)
         water = c4.number_input("Water (L)", 0.0, 10.0, 2.0, .1)
@@ -2219,7 +2270,10 @@ def render_progress() -> None:
         plans = list_plans(active_profile_id)
         plan_names = {str(item["id"]): str(item["name"]) for item in plans}
         daily, weekly = schedule_analytics(schedule, plan_names)
-        current_progress = get_schedule_progress(active_profile_id, st.session_state.plan_id)
+        current_progress = get_schedule_progress(
+            active_profile_id, st.session_state.plan_id,
+            active_on_or_after=local_today().isoformat(),
+        )
         metric_columns = st.columns(4)
         metric_columns[0].metric("Completed weeks", int((weekly["status"] == "Completed").sum()))
         metric_columns[1].metric("Active week", f"Week {current_progress.get('active_week_number', 1)}")
@@ -2314,7 +2368,7 @@ def render_clinician() -> None:
     selected_plans = list_plans(active_profile_id)
     selected_alerts = list_alerts(active_profile_id, include_resolved=True)
     selected_measurements = get_measurements(active_profile_id)
-    week_start = date.today() - timedelta(days=date.today().weekday())
+    week_start = local_week_start()
     selected_schedule = list_meal_schedule(
         active_profile_id, date_from=week_start.isoformat(),
         date_to=(week_start + timedelta(days=6)).isoformat(),
@@ -2591,7 +2645,7 @@ def render_clinical_plans() -> None:
             try:
                 plan = generate_plan(selected_profile, report_values)
                 plan_id = save_plan(active_profile_id, plan, reports[0]["id"] if reports else None)
-                week_start = date.today() - timedelta(days=date.today().weekday())
+                week_start = local_week_start()
                 create_meal_schedule(active_profile_id, plan_id, plan, week_start.isoformat())
                 request_review(
                     plan_id, str(current_user["display_name"]),
@@ -2673,7 +2727,10 @@ def render_clinical_progress() -> None:
         plan_names = {str(item["id"]): str(item["name"]) for item in plans}
         daily, weekly = schedule_analytics(schedule, plan_names)
         latest_plan_id = str(plans[0]["id"]) if plans else None
-        progress = get_schedule_progress(active_profile_id, latest_plan_id)
+        progress = get_schedule_progress(
+            active_profile_id, latest_plan_id,
+            active_on_or_after=local_today().isoformat(),
+        )
         metrics = st.columns(4)
         metrics[0].metric("Completed weeks", int((weekly["status"] == "Completed").sum()))
         metrics[1].metric("Current cycle", f"Week {progress.get('active_week_number', 1)}")
@@ -3000,7 +3057,10 @@ def render_assistant() -> None:
         "Plan-aware · allergy-aware · progress-aware",
     )
     api_state = assistant_api_status()
-    progress = get_schedule_progress(active_profile_id, st.session_state.plan_id)
+    progress = get_schedule_progress(
+        active_profile_id, st.session_state.plan_id,
+        active_on_or_after=local_today().isoformat(),
+    )
     a1, a2, a3 = st.columns([1, 1.7, 1])
     a1.metric("Assistant mode", api_state["mode"])
     use_external = False
@@ -3014,10 +3074,12 @@ def render_assistant() -> None:
         st.toggle(
             "Voice replies", key="assistant_voice_enabled",
             help="Use your device's real browser voice to read NutriGuide replies. No voice recording is uploaded.",
+            on_change=persist_audio_preferences, args=(str(current_user["id"]),),
         )
         st.toggle(
             "Message sounds", key="assistant_sound_enabled",
             help="Play a short optional chime after a message exchange. Browser autoplay rules may require one tap first.",
+            on_change=persist_audio_preferences, args=(str(current_user["id"]),),
         )
         if st.button("Clear conversation", width="stretch"):
             st.session_state.chat = [{
@@ -3507,6 +3569,7 @@ if current_user["role"] == "Customer":
     st.sidebar.toggle(
         "Voice alerts", key="voice_alerts_enabled",
         help="Speak new Dietitian-live, meal-reminder and critical safety alerts on this device.",
+        on_change=persist_audio_preferences, args=(str(current_user["id"]),),
     )
 if st.sidebar.button("Sign out", width="stretch"):
     if current_user["role"] == "Dietitian":

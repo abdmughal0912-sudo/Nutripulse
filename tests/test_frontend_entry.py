@@ -27,6 +27,7 @@ class FrontendEntryTests(unittest.TestCase):
             "render_signup_verification", "pending_signup_user", "Forgot password?",
             "render_password_reset", "send_password_reset_code", "send_signup_code",
             "OTP is required only for sign-up and password recovery",
+            "Email or username", "Registered email", "get_user_by_email",
         ):
             self.assertIn(marker, APP_SOURCE)
         self.assertIn("st.tabs(tab_names, default=default_tab)", APP_SOURCE)
@@ -94,6 +95,9 @@ class FrontendEntryTests(unittest.TestCase):
             "Summarize my weekly progress", "Message sounds", "pending_chat_sound",
             "DIETITIAN IS OFFLINE", "np-care-presence", "Voice replies", "Voice alerts",
             "speech_component_html", "pending_assistant_voice",
+            "get_user_preferences", "update_user_preferences", "persist_audio_preferences",
+            "on_change=persist_audio_preferences", "ensure_schedule_window",
+            "Recent records, today and upcoming meal schedule", "local_today",
         ):
             self.assertIn(marker, APP_SOURCE)
         self.assertIn("np-live-banner", PORTAL_THEME_SOURCE)

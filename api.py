@@ -24,6 +24,7 @@ from src.database import (
     get_schedule_progress, list_alerts, list_meal_schedule,
     set_meal_status_with_progress, upsert_profile,
 )
+from src.local_time import local_today
 
 assistant_api_status, _, assistant_reply = load_assistant_exports()
 from src.diet_engine import generate_plan
@@ -319,7 +320,7 @@ def api_diary_vision_url(payload: DiaryVisionUrlRequest) -> dict[str, Any]:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if result.get("status") != "ready":
         return {"logged": False, "analysis": result, "source": metadata}
-    log_date = payload.log_date or date.today().isoformat()
+    log_date = payload.log_date or local_today().isoformat()
     try:
         date.fromisoformat(log_date)
     except ValueError as exc:
@@ -376,7 +377,9 @@ def api_schedule(
     return {
         "count": len(items),
         "items": items,
-        "progress": get_schedule_progress(profile_id, plan_id),
+        "progress": get_schedule_progress(
+            profile_id, plan_id, active_on_or_after=local_today().isoformat(),
+        ),
     }
 
 

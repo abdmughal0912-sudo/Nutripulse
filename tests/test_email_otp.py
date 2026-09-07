@@ -145,6 +145,22 @@ class EmailOtpTests(unittest.TestCase):
         self.assertEqual(message, "Signed in.")
         record_login.assert_not_called()
 
+    def test_verified_user_can_sign_in_with_email(self) -> None:
+        encoded = hash_password("SecurePass123")
+        verified = {
+            "id": "user-email", "username": "person", "password_hash": encoded,
+            "role": "Customer", "display_name": "Person", "email": "person@example.com",
+            "active": 1, "approval_status": "Approved", "is_admin": 0,
+            "email_verified_at": "2026-08-31T12:00:00+00:00",
+        }
+        with patch("src.auth.get_user_by_username", return_value=None), patch(
+            "src.auth.get_user_by_email", return_value=verified,
+        ), patch("src.auth.record_login") as record_login:
+            user, message = authenticate_with_status("PERSON@example.com", "SecurePass123")
+        self.assertIsNotNone(user)
+        self.assertEqual(message, "Signed in.")
+        record_login.assert_called_once_with("user-email")
+
     def test_unverified_signup_requires_otp_but_verified_login_does_not(self) -> None:
         encoded = hash_password("SecurePass123")
         pending = {

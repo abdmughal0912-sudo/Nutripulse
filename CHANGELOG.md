@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.11.0 — 2026-09-05
+
+- Added routine login with either the registered email address or the existing username; one-time sign-up and recovery OTP rules are unchanged.
+- Changed Forgot Password recovery to begin with the registered email address and reject ambiguous or unverified recovery identities safely.
+- Persisted Voice Alerts, Voice Replies and Message Sounds per account in PostgreSQL or SQLite until the person turns each setting off.
+- Added configured-local-date helpers so Pakistan-time today is used consistently for diary entries, measurements, alerts, API defaults and plan generation.
+- Added rolling current/future schedule creation without deleting past records; analytics now show recent history, today and upcoming meals together.
+- Added regression coverage for email login, duplicate-email protection, persistent audio preferences and rolling schedule windows.
+
 ## 4.10.2 — 2026-09-01
 
 - Added a source-fingerprint bootstrap that clears all cached NutriPulse submodules once after a Streamlit hot deployment.

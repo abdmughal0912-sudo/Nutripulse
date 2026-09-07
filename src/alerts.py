@@ -5,6 +5,8 @@ import os
 from datetime import datetime, time, timedelta, timezone
 from typing import Any
 
+from .local_time import local_now as configured_local_now
+
 
 SEVERITY_ORDER = {"Critical": 0, "High": 1, "Medium": 2, "Info": 3}
 
@@ -201,8 +203,7 @@ def evaluate_alerts(
             "Diet plan status",
         ))
 
-    offset = float(os.getenv("NUTRIPULSE_UTC_OFFSET_HOURS", "5") or 5)
-    now = local_now or datetime.now(timezone(timedelta(hours=offset)))
+    now = local_now or configured_local_now()
     planned_today = [
         item for item in (meal_schedule or [])
         if str(item.get("scheduled_date")) == now.date().isoformat()
@@ -249,14 +250,14 @@ def evaluate_alerts(
                 "High", "Daily intake", "Daily energy is substantially above target",
                 f"Logged intake is {ratio:.0%} of the current daily target.",
                 "Review portions and missing context; do not compensate with fasting or unsafe restriction.",
-                f"Confirmed food diary: {datetime.now(timezone.utc).date().isoformat()}",
+                f"Confirmed food diary: {configured_local_now().date().isoformat()}",
             ))
         elif ratio >= 1.10:
             alerts.append(_alert(
                 "Medium", "Daily intake", "Daily energy is above target",
                 f"Logged intake is {ratio:.0%} of the current daily target.",
                 "Review portion estimates and plan the remaining meals without extreme restriction.",
-                f"Confirmed food diary: {datetime.now(timezone.utc).date().isoformat()}",
+                f"Confirmed food diary: {configured_local_now().date().isoformat()}",
             ))
 
     if adherence_pct is not None:
