@@ -8,7 +8,10 @@ import hmac
 import os
 from typing import Any
 
-from .database import create_user, get_user_by_username, has_admin, record_login
+from .database import (
+    create_user, get_user_by_email, get_user_by_username, has_admin,
+    is_email_registered, record_login,
+)
 
 
 ITERATIONS = 310_000
@@ -38,6 +41,7 @@ def verify_password(password: str, encoded: str) -> bool:
 def register_account(username: str, password: str, role: str, display_name: str,
                      email: str = "", credential: str = "") -> dict[str, Any]:
     clean_username = username.strip()
+    clean_email = email.strip().lower()
     if not (3 <= len(clean_username) <= 40) or not clean_username.replace("_", "").replace("-", "").isalnum():
         raise ValueError("Username must be 3–40 letters, numbers, hyphens, or underscores.")
     if role not in {"Customer", "Dietitian"}:
@@ -46,8 +50,10 @@ def register_account(username: str, password: str, role: str, display_name: str,
         raise ValueError("Enter your full display name.")
     if get_user_by_username(clean_username):
         raise ValueError("That username is already registered.")
+    if clean_email and is_email_registered(clean_email):
+        raise ValueError("That email address is already registered.")
     return create_user(
-        clean_username, hash_password(password), role, display_name, email, credential,
+        clean_username, hash_password(password), role, display_name, clean_email, credential,
         email_verified=False,
     )
 
@@ -63,8 +69,11 @@ def register_admin_account(username: str, password: str, display_name: str,
         raise ValueError("Enter the administrator's full name.")
     if get_user_by_username(clean_username):
         raise ValueError("That username is already registered.")
+    clean_email = email.strip().lower()
+    if clean_email and is_email_registered(clean_email):
+        raise ValueError("That email address is already registered.")
     return create_user(
-        clean_username, hash_password(password), "Dietitian", display_name, email,
+        clean_username, hash_password(password), "Dietitian", display_name, clean_email,
         "System Administrator", approval_status="Approved", is_admin=True,
         email_verified=False,
     )
@@ -73,9 +82,10 @@ def register_admin_account(username: str, password: str, display_name: str,
 def authenticate_with_status(
     username: str, password: str, *, record_success: bool = True,
 ) -> tuple[dict[str, Any] | None, str]:
-    user = get_user_by_username(username)
+    identifier = str(username or "").strip()
+    user = get_user_by_username(identifier) or get_user_by_email(identifier)
     if not user or not verify_password(password, str(user["password_hash"])):
-        return None, "Incorrect username or password."
+        return None, "Incorrect email/username or password."
     if "email_verified_at" in user and not str(user.get("email_verified_at") or "").strip():
         return (
             {key: value for key, value in user.items() if key != "password_hash"},

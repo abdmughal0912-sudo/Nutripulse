@@ -1,6 +1,6 @@
 # NutriPulse AI — Complete Project and Implementation Document
 
-**Application version:** 4.10.2
+**Application version:** 4.11.0
 
 **Document date:** 1 September 2026
 
@@ -25,8 +25,8 @@ NutriPulse is nutrition decision support. It is not a diagnostic system, emergen
 - Compact, centered authentication board for login, registration and password recovery.
 - Customer, Dietitian and Administrator registration paths.
 - One-time six-digit email code during sign-up.
-- Username-and-password login after the account email has been verified; OTP is not requested on every login.
-- Separate six-digit email code for **Forgot Password** before a PBKDF2 password hash can be replaced.
+- Email-or-username-and-password login after the account email has been verified; OTP is not requested on every login.
+- **Forgot Password** begins with the registered email address and uses a separate six-digit code before a PBKDF2 password hash can be replaced.
 - Ten-minute code expiry, five-attempt limit and 60-second resend cooldown.
 - Mobile, tablet, laptop and desktop layouts with stacked forms, scroll-safe tabs/tables, responsive charts and reduced-motion support.
 - Light cyan, lilac, champagne and mint portal accents, animated star-wave layers and normal readable text sizing.
@@ -53,6 +53,14 @@ NutriPulse is nutrition decision support. It is not a diagnostic system, emergen
 - Alert Center with persistent safety and schedule notifications.
 - Care Team workspace for assigned Dietitian details, questionnaires, recommendations, prescriptions and secure messages.
 - NutriGuide Assistant with optional voice replies and message sounds.
+- Voice Alerts, Voice Replies and Message Sounds are saved per account and remain enabled across reruns, sign-outs and device sessions until explicitly disabled.
+
+### 2.6 Date-aware records and rolling schedule window
+
+- All user-facing dates use the configured local offset (`NUTRIPULSE_UTC_OFFSET_HOURS`, default Pakistan UTC+5), not the server's UTC calendar date.
+- Diary entries, measurements, reminders, API defaults and new plan schedules therefore remain aligned with the person's local today.
+- When an active plan exists, NutriPulse ensures the current local week and the next local week are present without deleting completed or older records.
+- Overview analytics show the most recent past window, today and upcoming meal records together; older history remains available in Progress Analytics.
 
 ### 2.4 Dietitian workspace
 

@@ -15,13 +15,14 @@ from src.constants import ASSET_DIR, DATA_DIR
 from src.database import (
     acknowledge_alert, add_clinical_note, add_clinical_prescription, add_food_log,
     clear_user_presence, create_meal_schedule, create_questionnaire,
-    create_user, delete_food_log, get_food_logs, get_schedule_progress, initialize_database,
+    create_user, delete_food_log, ensure_schedule_window, get_food_logs,
+    get_schedule_progress, get_user_preferences, initialize_database,
     link_dietitian_customer, list_alerts, list_clinical_messages, list_clinical_notes,
     list_clinical_prescriptions, list_lab_reports, list_meal_schedule, list_questionnaires,
     list_live_dietitians_for_customer,
     load_profile, save_lab_report, save_plan, send_clinical_message, set_dietitian_approval,
     set_meal_status, set_meal_status_with_progress, submit_questionnaire, sync_alerts,
-    touch_dietitian_presence, upsert_profile,
+    touch_dietitian_presence, update_user_preferences, upsert_profile,
 )
 from src.auth import hash_password, verify_password
 from src.diet_engine import generate_plan
@@ -424,6 +425,66 @@ class DatabaseTests(unittest.TestCase):
             self.assertTrue(set_meal_status(meals[0]["id"], customer["id"], "Completed", db_path))
             refreshed = list_meal_schedule(customer["id"], plan_id=plan_id, db_path=db_path)
             self.assertEqual(refreshed[0]["status"], "Completed")
+
+    def test_audio_preferences_persist_until_user_changes_them(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            db_path = Path(directory) / "preferences.db"
+            initialize_database(db_path)
+            user = create_user(
+                "audio_user", hash_password("AudioPass123"), "Customer", "Audio User",
+                email="audio@example.com", db_path=db_path,
+            )
+            self.assertEqual(
+                get_user_preferences(user["id"], db_path),
+                {"voice_alerts": False, "voice_replies": False, "message_sounds": False},
+            )
+            update_user_preferences(
+                user["id"], voice_alerts=True, voice_replies=True,
+                message_sounds=True, db_path=db_path,
+            )
+            self.assertEqual(
+                get_user_preferences(user["id"], db_path),
+                {"voice_alerts": True, "voice_replies": True, "message_sounds": True},
+            )
+
+    def test_schedule_window_adds_today_and_future_without_deleting_history(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            db_path = Path(directory) / "rolling-schedule.db"
+            initialize_database(db_path)
+            patient = profile()
+            profile_id = upsert_profile(patient, db_path)
+            plan = generate_plan(patient, [])
+            plan_id = save_plan(profile_id, plan, db_path=db_path)
+            self.assertGreater(create_meal_schedule(profile_id, plan_id, plan, "2026-08-24", db_path), 0)
+            old_rows = list_meal_schedule(profile_id, plan_id=plan_id, db_path=db_path)
+            old_id = old_rows[0]["id"]
+            self.assertGreater(
+                ensure_schedule_window(
+                    profile_id, plan_id, reference_date="2026-09-02", weeks_ahead=1, db_path=db_path,
+                ),
+                0,
+            )
+            all_rows = list_meal_schedule(profile_id, plan_id=plan_id, db_path=db_path)
+            self.assertIn(old_id, {row["id"] for row in all_rows})
+            self.assertIn("2026-09-02", {row["scheduled_date"] for row in all_rows})
+            progress = get_schedule_progress(
+                profile_id, plan_id, db_path, active_on_or_after="2026-09-02",
+            )
+            self.assertEqual(progress["active_date"], "2026-09-02")
+
+    def test_duplicate_registered_email_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            db_path = Path(directory) / "email-unique.db"
+            initialize_database(db_path)
+            create_user(
+                "email_one", hash_password("EmailPass123"), "Customer", "Email One",
+                email="same@example.com", db_path=db_path,
+            )
+            with self.assertRaises(ValueError):
+                create_user(
+                    "email_two", hash_password("EmailPass123"), "Customer", "Email Two",
+                    email="SAME@example.com", db_path=db_path,
+                )
 
     def test_live_presence_is_current_and_caseload_scoped(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

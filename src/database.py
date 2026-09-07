@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from .constants import DATABASE_PATH
+from .local_time import local_today
 
 
 def _configured_database_url() -> str:
@@ -248,6 +249,16 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS user_preferences (
+            user_id TEXT PRIMARY KEY,
+            voice_alerts INTEGER NOT NULL DEFAULT 0,
+            voice_replies INTEGER NOT NULL DEFAULT 0,
+            message_sounds INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS clinical_questionnaires (
             id TEXT PRIMARY KEY,
             dietitian_id TEXT NOT NULL,
@@ -337,6 +348,10 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
         """
         CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx
         ON users (LOWER(username))
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS users_email_lower_idx
+        ON users (LOWER(email))
         """,
     ]
     with connection(db_path) as conn:
@@ -681,6 +696,9 @@ def create_user(username: str, password_hash: str, role: str, display_name: str,
     active = int(email_verified and (approval == "Approved" or is_admin))
     approved_at = utc_now() if active else None
     email_verified_at = utc_now() if email_verified else None
+    clean_email = email.strip().lower()
+    if clean_email and is_email_registered(clean_email, db_path=db_path):
+        raise ValueError("That email address is already registered.")
     with connection(db_path) as conn:
         conn.execute(
             """INSERT INTO users
@@ -689,7 +707,7 @@ def create_user(username: str, password_hash: str, role: str, display_name: str,
                 email_verified_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)""",
             (user_id, username.strip(), password_hash, role, display_name.strip(),
-             email.strip().lower(), credential.strip(), active, utc_now(), approval,
+             clean_email, credential.strip(), active, utc_now(), approval,
              approved_at, int(is_admin), email_verified_at),
         )
     return get_user(user_id, db_path=db_path) or {}
@@ -707,6 +725,72 @@ def get_user_by_username(username: str, db_path: Path = DATABASE_PATH) -> dict[s
             "SELECT * FROM users WHERE LOWER(username) = LOWER(?)", (username.strip(),),
         ).fetchone()
     return dict(row) if row else None
+
+
+def users_by_email(email: str, db_path: Path = DATABASE_PATH) -> list[dict[str, Any]]:
+    """Return accounts matching a normalized email without assuming legacy uniqueness."""
+    clean_email = str(email or "").strip().lower()
+    if not clean_email:
+        return []
+    with connection(db_path) as conn:
+        rows = conn.execute(
+            "SELECT * FROM users WHERE email != '' AND LOWER(email) = LOWER(?) ORDER BY created_at",
+            (clean_email,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_user_by_email(email: str, db_path: Path = DATABASE_PATH) -> dict[str, Any] | None:
+    """Return one unambiguous account for a registered email address."""
+    matches = users_by_email(email, db_path)
+    return matches[0] if len(matches) == 1 else None
+
+
+def is_email_registered(
+    email: str, db_path: Path = DATABASE_PATH, *, excluding_user_id: str | None = None,
+) -> bool:
+    """Check email ownership while allowing a user to retain their current address."""
+    matches = users_by_email(email, db_path)
+    return any(str(item["id"]) != str(excluding_user_id or "") for item in matches)
+
+
+def get_user_preferences(user_id: str, db_path: Path = DATABASE_PATH) -> dict[str, bool]:
+    """Load persistent opt-in audio settings for one authenticated account."""
+    with connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT voice_alerts, voice_replies, message_sounds FROM user_preferences WHERE user_id = ?",
+            (str(user_id),),
+        ).fetchone()
+    if not row:
+        return {"voice_alerts": False, "voice_replies": False, "message_sounds": False}
+    return {
+        "voice_alerts": bool(int(row["voice_alerts"])),
+        "voice_replies": bool(int(row["voice_replies"])),
+        "message_sounds": bool(int(row["message_sounds"])),
+    }
+
+
+def update_user_preferences(
+    user_id: str, *, voice_alerts: bool, voice_replies: bool,
+    message_sounds: bool, db_path: Path = DATABASE_PATH,
+) -> dict[str, bool]:
+    """Persist all user-controlled audio preferences until explicitly changed."""
+    with connection(db_path) as conn:
+        conn.execute(
+            """INSERT INTO user_preferences
+               (user_id, voice_alerts, voice_replies, message_sounds, updated_at)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(user_id) DO UPDATE SET
+                   voice_alerts=excluded.voice_alerts,
+                   voice_replies=excluded.voice_replies,
+                   message_sounds=excluded.message_sounds,
+                   updated_at=excluded.updated_at""",
+            (
+                str(user_id), int(bool(voice_alerts)), int(bool(voice_replies)),
+                int(bool(message_sounds)), utc_now(),
+            ),
+        )
+    return get_user_preferences(user_id, db_path)
 
 
 def record_login(user_id: str, db_path: Path = DATABASE_PATH) -> None:
@@ -824,6 +908,8 @@ def set_verified_user_email(user_id: str, email: str, db_path: Path = DATABASE_P
     clean_email = str(email or "").strip().lower()
     if not clean_email:
         raise ValueError("A verified email address is required.")
+    if is_email_registered(clean_email, db_path=db_path, excluding_user_id=str(user_id)):
+        return False
     with connection(db_path) as conn:
         verified_at = utc_now()
         cursor = conn.execute(
@@ -1230,6 +1316,33 @@ def create_meal_schedule(profile_id: str, plan_id: str, plan: dict[str, Any],
     return created
 
 
+def ensure_schedule_window(
+    profile_id: str, plan_id: str, *, reference_date: str | date_type | None = None,
+    weeks_ahead: int = 1, db_path: Path = DATABASE_PATH,
+) -> int:
+    """Ensure the current and upcoming local weeks exist without deleting history."""
+    if isinstance(reference_date, str):
+        anchor = date_type.fromisoformat(reference_date)
+    else:
+        anchor = reference_date or local_today()
+    monday = anchor - timedelta(days=anchor.weekday())
+    with connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT plan_json FROM diet_plans WHERE id=? AND profile_id=?",
+            (str(plan_id), str(profile_id)),
+        ).fetchone()
+    if not row:
+        return 0
+    plan = json.loads(str(row["plan_json"]))
+    created = 0
+    for week_offset in range(max(0, int(weeks_ahead)) + 1):
+        created += create_meal_schedule(
+            profile_id, plan_id, plan,
+            (monday + timedelta(days=week_offset * 7)).isoformat(), db_path,
+        )
+    return created
+
+
 def list_meal_schedule(profile_id: str, *, date_from: str | None = None,
                        date_to: str | None = None, plan_id: str | None = None,
                        db_path: Path = DATABASE_PATH) -> list[dict[str, Any]]:
@@ -1250,7 +1363,9 @@ def list_meal_schedule(profile_id: str, *, date_from: str | None = None,
     return [dict(row) for row in rows]
 
 
-def _summarize_schedule(rows: list[dict[str, Any]], plan_id: str | None) -> dict[str, Any]:
+def _summarize_schedule(
+    rows: list[dict[str, Any]], plan_id: str | None, *, active_on_or_after: str | None = None,
+) -> dict[str, Any]:
     if not rows:
         return {
             "plan_id": plan_id, "days": [], "weeks": [], "active_date": None,
@@ -1307,7 +1422,18 @@ def _summarize_schedule(rows: list[dict[str, Any]], plan_id: str | None) -> dict
             "completion_pct": round(completed / total * 100, 1) if total else 0.0,
             "status": state,
         })
-    active_day = next((day for day in days if day["status"] != "Completed"), None)
+    incomplete_days = [day for day in days if day["status"] != "Completed"]
+    if active_on_or_after:
+        anchor = date_type.fromisoformat(active_on_or_after)
+        active_day = next(
+            (
+                day for day in incomplete_days
+                if date_type.fromisoformat(str(day["scheduled_date"])) >= anchor
+            ),
+            None,
+        )
+    else:
+        active_day = incomplete_days[0] if incomplete_days else None
     completed_meals = sum(int(day["completed"]) for day in days)
     total_meals = sum(int(day["total"]) for day in days)
     return {
@@ -1325,7 +1451,8 @@ def _summarize_schedule(rows: list[dict[str, Any]], plan_id: str | None) -> dict
 
 
 def get_schedule_progress(profile_id: str, plan_id: str | None = None,
-                          db_path: Path = DATABASE_PATH) -> dict[str, Any]:
+                          db_path: Path = DATABASE_PATH, *,
+                          active_on_or_after: str | None = None) -> dict[str, Any]:
     selected_plan_id = plan_id
     with connection(db_path) as conn:
         if not selected_plan_id:
@@ -1344,7 +1471,9 @@ def get_schedule_progress(profile_id: str, plan_id: str | None = None,
                 (profile_id, selected_plan_id),
             ).fetchall()
             rows = [dict(row) for row in fetched]
-    return _summarize_schedule(rows, selected_plan_id)
+    return _summarize_schedule(
+        rows, selected_plan_id, active_on_or_after=active_on_or_after,
+    )
 
 
 def set_meal_status_with_progress(meal_id: str, profile_id: str, status: str,

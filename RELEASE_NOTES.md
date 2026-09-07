@@ -1,15 +1,21 @@
-# NutriPulse AI v4.10.2 — Release Notes
+# NutriPulse AI v4.11.0 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.10.2 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.11.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 **[Read the complete project and implementation document](docs/NUTRIPULSE_COMPLETE_PROJECT_DOCUMENT.md)**
 
 ## Release highlights
 
+- Sign in accepts either a registered email address or the existing username; existing accounts and passwords remain valid.
+- Forgot Password recovery starts with the registered email address and verifies the recovery code before changing the password.
+- Voice Alerts, Voice Replies and Message Sounds persist per account until the person explicitly disables them.
+- Pakistan-time date handling now updates diary, measurements, alerts, API defaults and plan generation consistently.
+- The schedule window automatically creates the current and next local weeks while preserving recent and older records.
+- The overview chart now shows recent past records, today and future planned meals with a clear current-date marker.
 - Streamlit now fingerprints all application Python sources and clears stale NutriPulse modules once after a code deployment.
 - Streamlit hot redeploys now detect and reload an older cached NutriGuide or diet-engine module instead of failing at application startup.
 - Approved Dietitian portal activity now publishes a persistent heartbeat to assigned Customers only.

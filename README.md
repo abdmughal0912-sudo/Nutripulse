@@ -2,7 +2,7 @@
   <img src="assets/nutripulse_hero.jpg" alt="NutriPulse AI nutrition intelligence platform" width="100%">
 </p>
 
-<h1 align="center">NutriPulse AI v4.10.2</h1>
+<h1 align="center">NutriPulse AI v4.11.0</h1>
 
 <p align="center">
   <strong>AI-assisted nutrition intelligence, clinical collaboration and longitudinal diet-plan monitoring.</strong>
@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/Streamlit-Application-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit application">
   <img src="https://img.shields.io/badge/FastAPI-REST_API-009688?logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Release-v4.10.2-6A5ACD" alt="Release v4.10.2">
+  <img src="https://img.shields.io/badge/Release-v4.11.0-6A5ACD" alt="Release v4.11.0">
   <img src="https://img.shields.io/badge/Source_rows-76%2C920-16423C" alt="76,920 audited source rows">
 </p>
 
@@ -25,14 +25,14 @@
     <img src="https://img.shields.io/badge/Open-Live_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Open the NutriPulse AI live app">
   </a>
   <a href="https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip">
-    <img src="https://img.shields.io/badge/Download-NutriPulse_v4.10.2-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.10.2">
+    <img src="https://img.shields.io/badge/Download-NutriPulse_v4.11.0-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.11.0">
   </a>
   <a href="RELEASE_NOTES.md">
     <img src="https://img.shields.io/badge/View-Release_Notes-1F6FEB?style=for-the-badge" alt="View release notes">
   </a>
 </p>
 
-NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, persistent PostgreSQL or local SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.10.2 adds deployment-wide stale-module protection while retaining caseload-scoped Dietitian live presence, grounded groceries, substitutions, recipes, progress summaries and optional voice or message alerts. It keeps one-time email verification during sign-up, password-only verified login, secure Gmail password recovery, reboot-safe accounts, automatic day/week progression, responsive role-separated workspaces and report-specific clinical-planning explanations. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
+NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, persistent PostgreSQL or local SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.11.0 adds email-or-username login, email-first password recovery, persistent per-account audio preferences and rolling local-date schedule windows while retaining deployment-wide stale-module protection, Dietitian live presence, grounded NutriGuide support and report-specific planning. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
 
 **Live application:** [NutriPulse AI — Nutrition Analyzer & Dietitian Platform](https://nutripulse-ai.streamlit.app/)
 
@@ -62,7 +62,7 @@ NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, p
 
 GitHub generates a clean ZIP package directly from the secured <code>main</code> branch:
 
-**[Download NutriPulse AI v4.10.2](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download NutriPulse AI v4.11.0](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 The package includes the application, API, audited public data indexes, portable classifier, Food Vision model, launchers, documentation and tests. It excludes passwords, API keys, runtime databases, Customer records, <code>.env</code>, Streamlit secrets and the private person-level row registry.
 
@@ -78,7 +78,7 @@ Before starting, create a long private value for `NUTRIPULSE_ADMIN_SETUP_CODE` i
 
 ## Email verification at sign-up
 
-Every new Customer, Dietitian and Administrator verifies a six-digit code once during account creation. After verification, normal login uses only the username and password. Forgot Password continues to require a separate recovery code. Existing accounts are preserved as verified during the database migration.
+Every new Customer, Dietitian and Administrator verifies a six-digit code once during account creation. After verification, normal login accepts either the registered email or the existing username with the password. Forgot Password begins with the registered email and continues to require a separate recovery code. Existing accounts are preserved as verified during the database migration.
 
 For Gmail, use a dedicated sending account with Google 2-Step Verification and a Google App Password. Add the following privately in Streamlit **App settings → Secrets**:
 
@@ -130,6 +130,8 @@ The launcher selects Python 3.12/3.11, creates `.venv`, installs requirements, s
 - Customer Care Team for Dietitian connections, questionnaires, and secure messages.
 - Live assigned-Dietitian banner, toast, Alert Center notification and top-right Care Team live/offline status with automatic inactivity expiry.
 - Advanced grounded NutriGuide for plans, labs, groceries, allergy-aware substitutions, recipes and schedule progress, plus optional message chimes, real browser voice replies, spoken alerts and a consent-gated external API adapter.
+- Voice Alerts, Voice Replies and Message Sounds are saved per account until the person explicitly turns them off.
+- The overview uses the configured local date, keeps recent completed records and automatically shows today plus upcoming schedule rows.
 
 ### Dietitian
 
