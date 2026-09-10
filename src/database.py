@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sqlite3
@@ -353,6 +354,31 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
         CREATE INDEX IF NOT EXISTS users_email_lower_idx
         ON users (LOWER(email))
         """,
+        """CREATE TABLE IF NOT EXISTS login_attempts (
+            bucket TEXT PRIMARY KEY, attempts INTEGER NOT NULL,
+            window_started DOUBLE PRECISION NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS account_events (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+            action TEXT NOT NULL, created_at TEXT NOT NULL)""",
+        """CREATE INDEX IF NOT EXISTS account_events_user_idx
+            ON account_events(user_id, created_at)""",
+        """CREATE TABLE IF NOT EXISTS care_tasks (
+            id TEXT PRIMARY KEY, customer_id TEXT NOT NULL REFERENCES users(id),
+            created_by TEXT NOT NULL REFERENCES users(id), title TEXT NOT NULL,
+            instructions TEXT NOT NULL DEFAULT '', due_date TEXT NOT NULL,
+            priority TEXT NOT NULL DEFAULT 'Normal', status TEXT NOT NULL DEFAULT 'Open',
+            revision INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL, completed_at TEXT)""",
+        """CREATE INDEX IF NOT EXISTS care_tasks_customer_idx
+            ON care_tasks(customer_id, due_date, status)""",
+        """CREATE TABLE IF NOT EXISTS care_task_events (
+            id TEXT PRIMARY KEY, task_id TEXT NOT NULL REFERENCES care_tasks(id),
+            actor_id TEXT NOT NULL REFERENCES users(id), status TEXT NOT NULL,
+            created_at TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0)""",
+        """CREATE INDEX IF NOT EXISTS care_task_events_task_idx
+            ON care_task_events(task_id, created_at)""",
+        """CREATE INDEX IF NOT EXISTS clinical_messages_unread_idx
+            ON clinical_messages(recipient_id, read_at, created_at)""",
     ]
     with connection(db_path) as conn:
         for statement in statements:
@@ -364,6 +390,7 @@ def initialize_database(db_path: Path = DATABASE_PATH) -> None:
                 "approved_at": "TEXT",
                 "is_admin": "INTEGER NOT NULL DEFAULT 0",
                 "email_verified_at": "TEXT",
+                "session_version": "INTEGER NOT NULL DEFAULT 0",
             },
             "lab_reports": {
                 "profile_id": "TEXT NOT NULL DEFAULT ''",
@@ -897,9 +924,18 @@ def update_user_password(user_id: str, password_hash: str,
         raise ValueError("A valid PBKDF2 password hash is required.")
     with connection(db_path) as conn:
         cursor = conn.execute(
-            "UPDATE users SET password_hash = ? WHERE id = ? AND active = 1",
+            "UPDATE users SET password_hash = ?, session_version = session_version + 1 "
+            "WHERE id = ? AND active = 1",
             (str(password_hash), str(user_id)),
         )
+        if cursor.rowcount:
+            conn.execute("UPDATE user_presence SET last_seen_at = '' WHERE user_id = ?", (str(user_id),))
+            bucket = hashlib.sha256(f"account:{user_id}".encode()).hexdigest()
+            conn.execute("DELETE FROM login_attempts WHERE bucket = ?", (bucket,))
+            conn.execute(
+                "INSERT INTO account_events(id, user_id, action, created_at) VALUES (?, ?, ?, ?)",
+                (str(uuid.uuid4()), str(user_id), "Password changed; sessions revoked", utc_now()),
+            )
     return cursor.rowcount > 0
 
 
@@ -1226,10 +1262,17 @@ def send_clinical_message(sender_id: str, recipient_id: str, subject: str, body:
                           parent_id: str | None = None) -> str:
     if message_type not in {"Message", "Question", "Recommendation", "Response"}:
         raise ValueError("Unsupported clinical message type.")
-    if len(subject.strip()) < 2 or len(body.strip()) < 2:
-        raise ValueError("Add a subject and message.")
+    if not 2 <= len(subject.strip()) <= 160 or not 2 <= len(body.strip()) <= 4000:
+        raise ValueError("Use a subject of 2–160 characters and a message of 2–4,000 characters.")
     message_id = str(uuid.uuid4())
     with connection(db_path) as conn:
+        participants = conn.execute(
+            "SELECT id FROM users WHERE id IN (?, ?) AND active = 1 "
+            "AND approval_status = 'Approved' AND email_verified_at IS NOT NULL",
+            (str(sender_id), str(recipient_id)),
+        ).fetchall()
+        if len(participants) != 2:
+            raise ValueError("Messages require two active, approved care-team accounts.")
         linked = conn.execute(
             """SELECT 1 FROM dietitian_customer_links
                WHERE ((dietitian_id=? AND customer_id=?) OR (dietitian_id=? AND customer_id=?))
@@ -1285,10 +1328,6 @@ def list_clinical_messages(user_id: str, other_user_id: str | None = None,
     sql += " ORDER BY created_at"
     with connection(db_path) as conn:
         rows = conn.execute(sql, tuple(parameters)).fetchall()
-        conn.execute(
-            "UPDATE clinical_messages SET read_at=? WHERE recipient_id=? AND read_at IS NULL",
-            (utc_now(), user_id),
-        )
     return [dict(row) for row in rows]
 
 
