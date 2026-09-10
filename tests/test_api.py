@@ -4,6 +4,7 @@ import importlib.util
 import io
 import os
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -19,7 +20,10 @@ class ApiTests(unittest.TestCase):
         cls.client = TestClient(app)
 
     def setUp(self) -> None:
-        os.environ.pop("NUTRIPULSE_API_KEY", None)
+        environment = patch.dict(os.environ, {"NUTRIPULSE_API_KEY": "test-api-key"})
+        environment.start()
+        self.addCleanup(environment.stop)
+        self.client.headers["X-API-Key"] = "test-api-key"
 
     def test_root_health_and_openapi(self) -> None:
         root = self.client.get("/")
@@ -79,6 +83,25 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(denied.status_code, 401)
         allowed = self.client.get("/api/v1/foods/search", headers={"X-API-Key": "test-secret"})
         self.assertEqual(allowed.status_code, 200)
+
+    def test_missing_configuration_blocks_reads_and_mutations(self) -> None:
+        os.environ.pop("NUTRIPULSE_API_KEY", None)
+        self.assertEqual(self.client.get("/api/v1/diary", params={"profile_id": "someone"}).status_code, 503)
+        self.assertEqual(self.client.post("/api/v1/schedule/example/status", json={"profile_id": "someone", "status": "Completed"}).status_code, 503)
+        self.assertEqual(self.client.get("/livez").status_code, 200)
+        self.assertEqual(self.client.get("/readyz").status_code, 503)
+
+    def test_readiness_probe_and_response_headers(self) -> None:
+        first = self.client.get("/readyz")
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(first.json()["database"], "available")
+        self.assertEqual(first.headers["Cache-Control"], "no-store")
+        self.assertEqual(first.headers["X-Content-Type-Options"], "nosniff")
+        self.assertNotEqual(first.headers["X-Request-ID"], self.client.get("/livez").headers["X-Request-ID"])
+        with patch("api.connection", side_effect=RuntimeError("private-database-password")):
+            failed = self.client.get("/readyz")
+        self.assertEqual(failed.status_code, 503)
+        self.assertNotIn("private-database-password", failed.text)
 
     def test_alert_evaluation_endpoint(self) -> None:
         response = self.client.post("/api/v1/alerts/evaluate", json={
