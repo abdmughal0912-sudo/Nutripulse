@@ -22,7 +22,7 @@ refresh_project_modules()
 from src.alerts import alert_counts, evaluate_alerts
 from src.account_security import record_account_event, validate_account_session
 from src.care_tasks import list_care_tasks, task_summary, unread_conversations
-from src import care_workspace_ui
+import src.care_workspace_ui as care_workspace_ui
 from src.import_compat import load_assistant_exports
 from src.chat_audio import message_sound_html, speech_component_html
 from src.auth import authenticate_with_status, hash_password, register_account, register_admin_account
