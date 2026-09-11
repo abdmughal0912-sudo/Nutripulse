@@ -1,6 +1,6 @@
 # NutriPulse AI — Complete Project and Implementation Document
 
-**Application version:** 4.11.0
+**Application version:** 4.12.0
 
 **Document date:** 1 September 2026
 
@@ -219,7 +219,7 @@ Important implementation locations:
 - Customer-hidden clinical notes.
 - Consent gate before any minimized context is sent to an external assistant service.
 - Server-side URL validation, private-network blocking, redirect checks, content-type checks and response-size limits for public web/image extraction.
-- Production API key and strict CORS configuration support.
+- Required API key on all /api/v1 endpoints and strict CORS configuration support.
 - Runtime databases, `.env`, Streamlit Secrets, Administrator code and customer exports are excluded from GitHub.
 
 Production use still requires HTTPS, encrypted backups, access logging, retention/deletion procedures, incident response, jurisdiction-specific privacy review and validation by qualified local clinicians.
@@ -342,3 +342,36 @@ Manual acceptance checks:
 - Merge only a complete commit into `main`; Streamlit then redeploys one consistent version.
 - Use additive database migrations and back up production data before schema or infrastructure changes.
 - Update `README.md`, `CHANGELOG.md`, `RELEASE_NOTES.md`, `DEPLOYMENT.md` and this document whenever behavior, configuration or safety boundaries change.
+
+## 16. Care workspace and account security (v4.12.0)
+
+- Added **Care Tasks** with priorities, due dates, overdue filters, task history and protection against conflicting updates.
+- Added **Care Inbox** with per-conversation unread totals, explicit read receipts and optional new-message chimes.
+- Added **Account & Security** with saved audio preferences, recent account activity and **Sign out everywhere**.
+- Recheck account approval, active status and session revocation before portal work; password recovery ends existing sessions.
+- Apply a persistent eight-attempt, 15-minute sign-in budget shared by email and username.
+- Preserve audio preferences when navigating away from their controls.
+- Refresh open schedules after the local date changes; clinical adherence excludes future meals.
+- Require a configured API key for every `/api/v1` request and provide `/livez` and `/readyz` probes.
+
+### Care Tasks
+
+Customers see their own tasks. Dietitians use their assigned caseload; Administrators may manage customer tasks across the system. Create a title, instructions, local due date and Normal or High priority. Tasks move through Open, In progress, Completed or Cancelled. Customers can cancel self-created tasks; staff cancel assigned tasks. Completed and cancelled records remain available in history.
+
+Task status changes check the expected revision before saving. If another screen already updated the task, the older update is rejected for review. Search, status/date filters and 20-item pages keep the view manageable. Task history records the actor, status, timestamp and ordered revision.
+
+### Care Inbox
+
+The inbox groups the signed-in account's care conversations and displays unread totals. Sidebar notifications refresh every 60 seconds while the portal is open. Viewing one conversation never marks another as read. **Mark displayed messages as read** acknowledges only the displayed incoming messages; messages arriving afterward stay unread. Recent thread views show 50 messages; older messages remain stored. Sending requires active, approved participants and an authorized current care relationship.
+
+### Account & Security
+
+Audio choices are restored before rendering controls and remain saved when controls are hidden on another page. The page lists the latest 100 account events and offers **Sign out everywhere**. A successful verified password reset also revokes previous sessions. Access is rechecked against account status, approval, role and session version; idle and absolute limits are one and twelve hours respectively. Background heartbeats do not extend the idle timer.
+
+Sign-in limits are stored in the configured database and shared by an account's email and username. The budget permits eight attempts per 15-minute window. Successful authentication or verified password recovery clears it. Account event records contain the event type, account ID and UTC timestamp, without passwords, OTP codes or clinical message text.
+
+### API operations and validation
+
+All /api/v1 calls require the configured X-API-Key. The separate /livez and /readyz probes distinguish a live process from database/configuration readiness. Responses include a request ID, no-store caching and nosniff headers. Streamlit's internal workflows continue without a new API secret.
+
+The automated gate covers account revocation, caseload isolation, concurrent task updates, thread-specific receipts, email/username throttling, preserved audio preferences, API configuration failures and all role pages. The [production-readiness review](PRODUCTION_READINESS_REVIEW.md) records remaining scaling, backup, access-control and clinical-validation work; it does not claim certification.
