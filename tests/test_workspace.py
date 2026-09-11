@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from unittest.mock import patch
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from pathlib import Path
@@ -182,6 +183,26 @@ class WorkspaceTests(unittest.TestCase):
     def test_password_change_invalidates_existing_sessions(self):
         self.assertTrue(update_user_password(self.customer["id"], self.password_hash, self.db))
         self.assertIsNone(self.valid_session(self.customer))
+
+    def test_backup_import_preserves_new_records_without_overwriting(self):
+        from scripts.migrate_sqlite_to_postgres import migrate
+        self.task()
+        update_user_preferences(self.customer["id"], voice_alerts=True, voice_replies=True,
+                                message_sounds=True, db_path=self.db)
+        revoke_account_sessions(self.customer["id"], self.db)
+        target = Path(self.directory.name) / "migration-target.db"
+        with patch("scripts.migrate_sqlite_to_postgres.database_backend", return_value={"engine": "PostgreSQL"}), \
+             patch("scripts.migrate_sqlite_to_postgres.initialize_database", side_effect=lambda: initialize_database(target)), \
+             patch("scripts.migrate_sqlite_to_postgres.connection", side_effect=lambda: connection(target)):
+            counts = migrate(self.db)
+            second = migrate(self.db)
+        self.assertEqual(counts["care_tasks"], 1)
+        self.assertEqual(counts["care_task_events"], 1)
+        self.assertEqual(counts["user_preferences"], 1)
+        self.assertEqual(counts["account_events"], 1)
+        self.assertEqual(sum(second.values()), 0)
+        self.assertTrue(all(get_user_preferences(self.customer["id"], target).values()))
+        self.assertEqual(len(list_care_tasks(self.customer["id"], db_path=target)), 1)
 
     def test_session_timeout_and_changed_access(self):
         self.assertIsNone(self.valid_session(self.customer, now=100 + SESSION_IDLE_SECONDS))
