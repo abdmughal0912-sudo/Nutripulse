@@ -1,5 +1,19 @@
 # Changelog
 
+## 4.12.0 — 2026-09-11
+
+- Added **Care Tasks** with priorities, due dates, overdue filters, task history and protection against conflicting updates.
+- Added **Care Inbox** with per-conversation unread totals, explicit read receipts and optional new-message chimes.
+- Added **Account & Security** with saved audio preferences, recent account activity and **Sign out everywhere**.
+- Recheck account approval, active status and session revocation before portal work; password recovery ends existing sessions.
+- Apply a persistent eight-attempt, 15-minute sign-in budget shared by email and username.
+- Preserve audio preferences when navigating away from their controls.
+- Refresh open schedules after the local date changes; clinical adherence excludes future meals.
+- Require a configured API key for every `/api/v1` request and provide `/livez` and `/readyz` probes.
+
+- Extended SQLite-to-PostgreSQL backup imports to preserve care tasks, task history, account events and audio preferences.
+- Added behavioral security tests and interactive care-workspace checks for all roles.
+
 ## 4.11.0 — 2026-09-05
 
 - Added routine login with either the registered email address or the existing username; one-time sign-up and recovery OTP rules are unchanged.
