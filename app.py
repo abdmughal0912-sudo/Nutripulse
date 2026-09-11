@@ -3421,9 +3421,9 @@ def render_web_and_api() -> None:
         api_url = os.getenv("NUTRIPULSE_API_URL", "http://127.0.0.1:8000").rstrip("/")
         status_columns = st.columns(4)
         status_columns[0].metric("API version", APP_VERSION)
-        status_columns[1].metric("Endpoints", 18)
+        status_columns[1].metric("Endpoints", 20)
         status_columns[2].metric("Schema", "OpenAPI 3")
-        status_columns[3].metric("Protection", "Optional API key")
+        status_columns[3].metric("Protection", "API key required")
         st.markdown(
             '<div class="np-alert"><span>⌁</span><div><strong>Start the full stack</strong><br>'
             '<small>Windows: double-click START_ALL.bat · macOS/Linux: run the Streamlit and API launch scripts in separate terminals.</small></div></div>',
@@ -3445,6 +3445,8 @@ def render_web_and_api() -> None:
 
         endpoints = pd.DataFrame([
             ["GET", "/health", "Service and model readiness"],
+            ["GET", "/livez", "Process liveness"],
+            ["GET", "/readyz", "Database and API configuration readiness"],
             ["GET", "/api/v1/foods/search", "Search the nutrition dataset"],
             ["POST", "/api/v1/classifier/predict", "Classify a nutrient profile"],
             ["POST", "/api/v1/labs/analyze", "Flag verified laboratory values"],
@@ -3465,10 +3467,10 @@ def render_web_and_api() -> None:
         ], columns=["Method", "Endpoint", "Purpose"])
         st.dataframe(endpoints, width="stretch", hide_index=True)
         st.code(
-            f'curl "{api_url}/api/v1/foods/search?q=apple&limit=5"',
+            f'curl -H "X-API-Key: <your-private-key>" "{api_url}/api/v1/foods/search?q=apple&limit=5"',
             language="bash",
         )
-        st.caption("If NUTRIPULSE_API_KEY is set, add: -H \"X-API-Key: your-secret\". Never commit the real key.")
+        st.caption("Configure NUTRIPULSE_API_KEY on the API host and send X-API-Key with every /api/v1 request. This key is for trusted server integrations; keep it private.")
 
 
 def render_admin() -> None:
