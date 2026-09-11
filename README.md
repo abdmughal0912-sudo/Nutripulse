@@ -2,7 +2,7 @@
   <img src="assets/nutripulse_hero.jpg" alt="NutriPulse AI nutrition intelligence platform" width="100%">
 </p>
 
-<h1 align="center">NutriPulse AI v4.11.0</h1>
+<h1 align="center">NutriPulse AI v4.12.0</h1>
 
 <p align="center">
   <strong>AI-assisted nutrition intelligence, clinical collaboration and longitudinal diet-plan monitoring.</strong>
@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/Streamlit-Application-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit application">
   <img src="https://img.shields.io/badge/FastAPI-REST_API-009688?logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Release-v4.11.0-6A5ACD" alt="Release v4.11.0">
+  <img src="https://img.shields.io/badge/Release-v4.12.0-6A5ACD" alt="Release v4.12.0">
   <img src="https://img.shields.io/badge/Source_rows-76%2C920-16423C" alt="76,920 audited source rows">
 </p>
 
@@ -25,14 +25,14 @@
     <img src="https://img.shields.io/badge/Open-Live_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Open the NutriPulse AI live app">
   </a>
   <a href="https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip">
-    <img src="https://img.shields.io/badge/Download-NutriPulse_v4.11.0-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.11.0">
+    <img src="https://img.shields.io/badge/Download-NutriPulse_v4.12.0-2EA44F?style=for-the-badge&logo=github&logoColor=white" alt="Download NutriPulse v4.12.0">
   </a>
   <a href="RELEASE_NOTES.md">
     <img src="https://img.shields.io/badge/View-Release_Notes-1F6FEB?style=for-the-badge" alt="View release notes">
   </a>
 </p>
 
-NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, persistent PostgreSQL or local SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.11.0 adds email-or-username login, email-first password recovery, persistent per-account audio preferences and rolling local-date schedule windows while retaining deployment-wide stale-module protection, Dietitian live presence, grounded NutriGuide support and report-specific planning. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
+NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, persistent PostgreSQL or local SQLite, Pandas, Plotly, ONNX/OpenCV inference, bundled RapidOCR, and a portable pure-Python food-quality classifier. Version 4.12.0 adds a shared care-task board, an unread-message inbox, account-security controls, persistent login protection and fail-closed API access. Email login, recovery OTP, saved audio preferences, rolling dates, Food Vision and laboratory-specific plans remain available. Aggregate lineage in the public repository audits all 76,920 supplied source rows without publishing person-level benchmark rows.
 
 **Live application:** [NutriPulse AI — Nutrition Analyzer & Dietitian Platform](https://nutripulse-ai.streamlit.app/)
 
@@ -62,7 +62,7 @@ NutriPulse is a nutrition intelligence platform built with Streamlit, FastAPI, p
 
 GitHub generates a clean ZIP package directly from the secured <code>main</code> branch:
 
-**[Download NutriPulse AI v4.11.0](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download NutriPulse AI v4.12.0](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 The package includes the application, API, audited public data indexes, portable classifier, Food Vision model, launchers, documentation and tests. It excludes passwords, API keys, runtime databases, Customer records, <code>.env</code>, Streamlit secrets and the private person-level row registry.
 
@@ -220,7 +220,7 @@ Important endpoints:
 - `POST /api/v1/web/scrape`
 - `POST /api/v1/web/extract`
 
-Set `NUTRIPULSE_API_KEY` in production. Clients send it as `X-API-Key`.
+Set `NUTRIPULSE_API_KEY` on every FastAPI deployment, including local API testing. Clients send it as `X-API-Key`. Missing configuration returns 503; invalid keys return 401. This is a trusted-server integration key, not per-customer authorization. Streamlit's internal workflows do not need an API key.
 
 ## Nutrition Assistant API adapter
 
@@ -256,3 +256,18 @@ GitHub stores and validates the source code; it does not run this Streamlit/Fast
 ## Medical and privacy scope
 
 NutriPulse is decision support and education, not diagnosis, emergency care, or medical prescribing. Nutrition prescriptions must remain within the professional's jurisdictional scope. OCR values require human verification. Food images cannot verify ingredients, allergens, cross-contact, or exact portions. Production deployment requires clinical validation, a private Administrator setup code, API protection, TLS, encrypted backups, consent procedures, audit/retention rules and jurisdiction-specific privacy review.
+
+## Care workspace upgrade
+
+- Added **Care Tasks** with priorities, due dates, overdue filters, task history and protection against conflicting updates.
+- Added **Care Inbox** with per-conversation unread totals, explicit read receipts and optional new-message chimes.
+- Added **Account & Security** with saved audio preferences, recent account activity and **Sign out everywhere**.
+- Recheck account approval, active status and session revocation before portal work; password recovery ends existing sessions.
+- Apply a persistent eight-attempt, 15-minute sign-in budget shared by email and username.
+- Preserve audio preferences when navigating away from their controls.
+- Refresh open schedules after the local date changes; clinical adherence excludes future meals.
+- Require a configured API key for every `/api/v1` request and provide `/livez` and `/readyz` probes.
+
+Open **Care Tasks**, **Care Inbox**, or **Account & Security** in the portal sidebar. Dietitians select a customer from their active caseload first.
+
+Read the [production-readiness review](docs/PRODUCTION_READINESS_REVIEW.md) for the audited gaps, implemented controls and remaining rollout work. This release is an engineering upgrade, not a clinical or compliance certification.

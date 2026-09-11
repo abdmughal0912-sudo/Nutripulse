@@ -1,4 +1,4 @@
-# NutriPulse v4.10.0 deployment
+# NutriPulse v4.12.0 deployment
 
 ## Local Windows deployment
 
@@ -22,7 +22,7 @@ NUTRIPULSE_PRESENCE_TTL_SECONDS=300
 ```
 
 Email verification is mandatory once during sign-up and for password recovery;
-routine login uses the verified account's username and password. For Gmail SMTP, enable
+routine login uses the verified account's email or username and password. For Gmail SMTP, enable
 Google 2-Step Verification on a dedicated sender account and generate an App
 Password. Put it only in the hosting provider's secret manager. New accounts
 must register a valid email. Existing accounts are marked verified during the
@@ -113,3 +113,17 @@ python scripts/migrate_sqlite_to_postgres.py /private/path/nutripulse.db
 ```
 
 The importer uses primary-key conflict protection and does not overwrite existing PostgreSQL rows. Back up both databases first and handle all Customer data according to your privacy and consent requirements.
+
+## v4.12 care and account upgrade
+
+Database initialization adds care-task/history, account-event and sign-in-limit tables and an account session-version column. Existing accounts and clinical records are preserved. Back up the configured database before a production upgrade and validate restoration in staging.
+
+No new secret is required for the Streamlit portal. For the separate FastAPI service, `NUTRIPULSE_API_KEY` is now required on all deployments: every `/api/v1` call must send `X-API-Key`. Absent configuration returns 503 and invalid keys return 401. Keep this shared integration key on trusted servers; it does not provide per-user authorization.
+
+- `GET /livez`: lightweight process liveness.
+- `GET /readyz`: database availability and API-key configuration; 503 when either is unavailable.
+- `GET /health`: existing data/model status.
+
+Account sessions expire after one hour without interaction or twelve hours after login. Password recovery and **Sign out everywhere** revoke existing sessions on their next action or 60-second heartbeat. Audio preferences remain stored with the account across sign-outs.
+
+The backup importer includes care tasks, ordered task history, account events and audio preferences. Transient presence and sign-in budgets are intentionally not migrated. See [the production-readiness review](docs/PRODUCTION_READINESS_REVIEW.md) for remaining infrastructure, API-authorization and clinical-validation work.

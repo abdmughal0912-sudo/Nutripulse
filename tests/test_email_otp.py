@@ -25,6 +25,14 @@ from src.email_otp import (
 
 
 class EmailOtpTests(unittest.TestCase):
+    def setUp(self) -> None:
+        # Fictional-account unit tests isolate persistence; test_workspace covers
+        # real database-backed authentication limits and account events.
+        for name, value in [("reserve_login_attempt", True), ("clear_login_attempts", None), ("record_account_event", None)]:
+            stub = patch(f"src.auth.{name}", return_value=value)
+            stub.start()
+            self.addCleanup(stub.stop)
+
     def test_email_validation_and_masking(self) -> None:
         self.assertTrue(is_valid_email_address("person@example.com"))
         self.assertFalse(is_valid_email_address("not-an-email"))

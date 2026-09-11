@@ -1,14 +1,25 @@
-# NutriPulse AI v4.11.0 — Release Notes
+# NutriPulse AI v4.12.0 — Release Notes
 
 ![NutriPulse AI](assets/nutripulse_hero.jpg)
 
 ## Download
 
-**[Download the secured NutriPulse v4.11.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
+**[Download the secured NutriPulse v4.12.0 package](https://github.com/abdmughal0912-sudo/Nutripulse/archive/refs/heads/main.zip)**
 
 **[Read the complete project and implementation document](docs/NUTRIPULSE_COMPLETE_PROJECT_DOCUMENT.md)**
 
 ## Release highlights
+
+- Added **Care Tasks** with priorities, due dates, overdue filters, task history and protection against conflicting updates.
+- Added **Care Inbox** with per-conversation unread totals, explicit read receipts and optional new-message chimes.
+- Added **Account & Security** with saved audio preferences, recent account activity and **Sign out everywhere**.
+- Recheck account approval, active status and session revocation before portal work; password recovery ends existing sessions.
+- Apply a persistent eight-attempt, 15-minute sign-in budget shared by email and username.
+- Preserve audio preferences when navigating away from their controls.
+- Refresh open schedules after the local date changes; clinical adherence excludes future meals.
+- Require a configured API key for every `/api/v1` request and provide `/livez` and `/readyz` probes.
+
+### Retained capabilities
 
 - Sign in accepts either a registered email address or the existing username; existing accounts and passwords remain valid.
 - Forgot Password recovery starts with the registered email address and verifies the recovery code before changing the password.

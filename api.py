@@ -3,13 +3,14 @@ from __future__ import annotations
 import hmac
 import json
 import os
+import uuid
 from datetime import date
 from functools import lru_cache
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.runtime_refresh import refresh_project_modules
@@ -20,7 +21,7 @@ from src.alerts import alert_counts, evaluate_alerts
 from src.import_compat import load_assistant_exports
 from src.constants import APP_NAME, APP_VERSION, ASSET_DIR, DATA_DIR
 from src.database import (
-    acknowledge_alert, add_food_log, get_food_logs, initialize_database,
+    acknowledge_alert, add_food_log, connection, get_food_logs, initialize_database,
     get_schedule_progress, list_alerts, list_meal_schedule,
     set_meal_status_with_progress, upsert_profile,
 )
@@ -143,7 +144,9 @@ def configured_origins() -> list[str]:
 
 def require_api_key(x_api_key: Annotated[str | None, Header()] = None) -> None:
     expected = os.getenv("NUTRIPULSE_API_KEY", "").strip()
-    if expected and (not x_api_key or not hmac.compare_digest(x_api_key, expected)):
+    if not expected:
+        raise HTTPException(status_code=503, detail="API access is not configured.")
+    if not x_api_key or not hmac.compare_digest(x_api_key, expected):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing or invalid X-API-Key header.")
 
 
@@ -167,6 +170,37 @@ app.add_middleware(
 )
 router = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_key)])
 initialize_database()
+
+
+@app.middleware("http")
+async def response_security(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = str(uuid.uuid4())
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get("/livez", tags=["service"])
+def livez() -> dict[str, str]:
+    return {"status": "alive", "version": APP_VERSION}
+
+
+@app.get("/readyz", tags=["service"])
+def readyz() -> JSONResponse:
+    database_ok = False
+    try:
+        with connection() as conn:
+            database_ok = conn.execute("SELECT 1").fetchone() is not None
+    except Exception:
+        pass  # Public probes must not disclose connection strings or driver details.
+    key_configured = bool(os.getenv("NUTRIPULSE_API_KEY", "").strip())
+    ready = database_ok and key_configured
+    return JSONResponse(status_code=200 if ready else 503, content={
+        "status": "ready" if ready else "not-ready", "version": APP_VERSION,
+        "database": "available" if database_ok else "unavailable",
+        "api_access": "configured" if key_configured else "not-configured",
+    })
 
 
 @app.get("/", tags=["service"])

@@ -17,9 +17,12 @@ os.environ["NUTRIPULSE_DATABASE_PATH"] = str(DB_PATH)
 from src.auth import hash_password
 from src.database import (
     create_meal_schedule, create_user, initialize_database, link_dietitian_customer,
-    save_plan, upsert_profile,
+    save_plan, upsert_profile, get_user_preferences, send_clinical_message,
 )
 from src.diet_engine import generate_plan
+from src.care_tasks import create_care_task, list_care_tasks, unread_conversations
+from src.account_security import revoke_account_sessions
+from src.local_time import local_today
 
 PAGES = [
     "◈  Overview",
@@ -31,6 +34,9 @@ PAGES = [
     "⌕  Food Library",
     "↗  Progress Analytics",
     "✦  Care Team",
+    "✓  Care Tasks",
+    "✉  Care Inbox",
+    "⚙  Account & Security",
     "✧  NutriGuide Assistant",
     "◆  Nutrition Classifier",
     "⌘  Evidence Web & API",
@@ -45,6 +51,9 @@ DIETITIAN_PAGES = [
     "↗  Progress Analytics",
     "◆  Notes & Prescriptions",
     "✉  Questions & Messaging",
+    "✓  Care Tasks",
+    "✉  Care Inbox",
+    "⚙  Account & Security",
 ]
 
 ADMIN_PAGES = [
@@ -92,6 +101,10 @@ def main() -> None:
         "cuisine": "Mediterranean", "conditions": [], "allergies": [], "medications": "",
     }, DB_PATH)
     link_dietitian_customer(dietitian["id"], user["id"], DB_PATH)
+    create_care_task(dietitian["id"], user["id"], "Bring your food diary",
+                    "Include recent meals.", local_today().isoformat(), db_path=DB_PATH)
+    send_clinical_message(dietitian["id"], user["id"], "Diary review",
+                          "Please bring your diary to the review.", DB_PATH)
     plan = generate_plan(customer_profile, [])
     plan_id = save_plan(user["id"], plan, db_path=DB_PATH)
     create_meal_schedule(user["id"], plan_id, plan, "2026-08-24", DB_PATH)
@@ -105,6 +118,31 @@ def main() -> None:
         if errors:
             raise AssertionError(f"{page}: {errors}")
         print(f"{page}: PASS")
+    # Exercise stateful controls, including hidden widget cleanup between pages.
+    app.sidebar.radio[0].set_value("⚙  Account & Security").run()
+    app.toggle(key="assistant_voice_enabled").set_value(True).run()
+    app.toggle(key="assistant_sound_enabled").set_value(True).run()
+    app.sidebar.radio[0].set_value("◈  Overview").run()
+    app.toggle(key="voice_alerts_enabled").set_value(True).run()
+    app.sidebar.radio[0].set_value("⚙  Account & Security").run()
+    assert app.toggle(key="assistant_voice_enabled").value
+    assert app.toggle(key="assistant_sound_enabled").value
+    assert all(get_user_preferences(user["id"], DB_PATH).values())
+    app.toggle(key="assistant_voice_enabled").set_value(False).run()
+    prefs = get_user_preferences(user["id"], DB_PATH)
+    assert not prefs["voice_replies"] and prefs["message_sounds"] and prefs["voice_alerts"]
+
+    app.sidebar.radio[0].set_value("✓  Care Tasks").run()
+    next(item for item in app.selectbox if item.label == "Task status").set_value("Completed").run()
+    next(item for item in app.button if item.label == "Update status").click().run()
+    assert list_care_tasks(user["id"], db_path=DB_PATH)[0]["status"] == "Completed"
+    app.sidebar.radio[0].set_value("✉  Care Inbox").run()
+    assert unread_conversations(user["id"], DB_PATH)
+    next(item for item in app.button if item.label == "Mark displayed messages as read").click().run()
+    assert not unread_conversations(user["id"], DB_PATH)
+    assert not app.exception
+    print("AUDIO_PERSISTENCE_TASK_UPDATE_AND_READ_RECEIPTS=PASS")
+
     safe_dietitian = {key: value for key, value in dietitian.items() if key != "password_hash"}
     clinical_app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60)
     clinical_app.session_state["current_user"] = safe_dietitian
@@ -125,6 +163,11 @@ def main() -> None:
         if errors:
             raise AssertionError(f"{page}: {errors}")
         print(f"ADMIN · {page}: PASS")
+    revoke_account_sessions(user["id"], DB_PATH)
+    app.run()
+    assert "current_user" not in app.session_state
+    assert not app.exception
+    print("SESSION_REVOCATION=PASS")
     print("STREAMLIT_CUSTOMER_DIETITIAN_AND_ADMIN_PAGES=PASS")
 
 

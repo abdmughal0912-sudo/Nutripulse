@@ -5,6 +5,7 @@ import html
 import hashlib
 import json
 import os
+import time
 from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
@@ -19,6 +20,9 @@ from src.runtime_refresh import refresh_project_modules
 refresh_project_modules()
 
 from src.alerts import alert_counts, evaluate_alerts
+from src.account_security import record_account_event, validate_account_session
+from src.care_tasks import list_care_tasks, task_summary, unread_conversations
+import src.care_workspace_ui as care_workspace_ui
 from src.import_compat import load_assistant_exports
 from src.chat_audio import message_sound_html, speech_component_html
 from src.auth import authenticate_with_status, hash_password, register_account, register_admin_account
@@ -604,6 +608,8 @@ def render_authentication() -> None:
                             st.rerun()
                         clear_pending_signup()
                         st.session_state.current_user = user
+                        st.session_state.session_started_at = time.time()
+                        st.session_state.session_last_active_at = time.time()
                         st.rerun()
                     else:
                         st.error(message)
@@ -744,10 +750,40 @@ def render_authentication() -> None:
                         st.error(str(exc))
 
 
+def validate_current_session(*, interactive: bool = False) -> dict:
+    now = time.time()
+    user = validate_account_session(
+        st.session_state.get("current_user", {}),
+        started_at=st.session_state.setdefault("session_started_at", now),
+        last_active_at=st.session_state.setdefault("session_last_active_at", now),
+        now=now,
+    )
+    if not user:
+        st.session_state.clear()
+        st.session_state.entry_view = "auth"
+        st.session_state.access_notice = "Your session ended. Please sign in again."
+        st.rerun()
+    st.session_state.current_user = user
+    selected_profile = st.session_state.get("session_profile_id")
+    if user["role"] == "Dietitian" and not user.get("is_admin") and selected_profile and selected_profile != user["id"]:
+        allowed = {str(item["id"]) for item in list_linked_customers(str(user["id"]))}
+        if selected_profile not in allowed:
+            st.session_state.pop("session_profile_id", None)
+            st.session_state.pop("active_customer_selector", None)
+            st.session_state.background_full_rerun = True
+            st.rerun()
+    if interactive:
+        st.session_state.session_last_active_at = now
+    return user
+
+
 def require_login() -> dict:
     existing = st.session_state.get("current_user")
     if existing:
-        return existing
+        return validate_current_session(interactive=not st.session_state.pop("background_full_rerun", False))
+    notice = st.session_state.pop("access_notice", None)
+    if notice:
+        st.info(notice)
     if st.session_state.get("pending_signup_user"):
         st.session_state.entry_view = "auth"
     entry_view = str(st.session_state.get("entry_view", "landing"))
@@ -789,12 +825,13 @@ def cached_web_article(url: str) -> dict:
 
 def session_setup() -> None:
     preference_user_id = str(current_user["id"])
-    if st.session_state.get("audio_preference_user_id") != preference_user_id:
-        preferences = get_user_preferences(preference_user_id)
-        st.session_state.assistant_sound_enabled = preferences["message_sounds"]
-        st.session_state.assistant_voice_enabled = preferences["voice_replies"]
-        st.session_state.voice_alerts_enabled = preferences["voice_alerts"]
-        st.session_state.audio_preference_user_id = preference_user_id
+    # Hidden widget keys are discarded by Streamlit. Restore saved account settings
+    # before widgets render; navigation must not silently disable audio.
+    preferences = get_user_preferences(preference_user_id)
+    st.session_state.assistant_sound_enabled = preferences["message_sounds"]
+    st.session_state.assistant_voice_enabled = preferences["voice_replies"]
+    st.session_state.voice_alerts_enabled = preferences["voice_alerts"]
+    st.session_state.audio_preference_user_id = preference_user_id
     profile_changed = st.session_state.get("session_profile_id") != active_profile_id
     if profile_changed:
         fallback_name = str(current_user["display_name"])
@@ -867,11 +904,13 @@ def session_setup() -> None:
 
 def persist_audio_preferences(user_id: str) -> None:
     """Save opt-in audio controls until this account changes them again."""
+    validate_current_session()
+    saved = get_user_preferences(user_id)
     update_user_preferences(
         user_id,
-        voice_alerts=bool(st.session_state.get("voice_alerts_enabled", False)),
-        voice_replies=bool(st.session_state.get("assistant_voice_enabled", False)),
-        message_sounds=bool(st.session_state.get("assistant_sound_enabled", False)),
+        voice_alerts=bool(st.session_state.get("voice_alerts_enabled", saved["voice_alerts"])),
+        voice_replies=bool(st.session_state.get("assistant_voice_enabled", saved["voice_replies"])),
+        message_sounds=bool(st.session_state.get("assistant_sound_enabled", saved["message_sounds"])),
     )
 
 
@@ -883,6 +922,7 @@ profile = st.session_state.profile
 @st.fragment(run_every="60s")
 def dietitian_presence_heartbeat() -> None:
     """Keep approved Dietitians live while their authenticated portal is active."""
+    validate_current_session()
     if not touch_dietitian_presence(str(current_user["id"])):
         return
     assigned_count = len(list_linked_customers(str(current_user["id"])))
@@ -906,6 +946,7 @@ active_customer_live_dietitians = (
 @st.fragment(run_every="60s")
 def live_dietitian_watch() -> None:
     """Notify a Customer when their own assigned Dietitian becomes live."""
+    validate_current_session()
     live = list_live_dietitians_for_customer(str(current_user["id"]))
     live_ids = tuple(str(item["id"]) for item in live)
     had_state = "live_dietitian_ids" in st.session_state
@@ -924,6 +965,7 @@ def live_dietitian_watch() -> None:
                     height=0,
                 )
         if had_state:
+            st.session_state.background_full_rerun = True
             st.rerun()
     if not live:
         return
@@ -941,7 +983,14 @@ if current_user["role"] == "Customer":
 
 @st.fragment(run_every="60s")
 def live_schedule_watch() -> None:
+    validate_current_session()
     now = local_now()
+    today = now.date().isoformat()
+    previous_day = st.session_state.get("schedule_day_seen")
+    st.session_state.schedule_day_seen = today
+    if previous_day and previous_day != today:
+        st.session_state.background_full_rerun = True
+        st.rerun()  # Refresh rolling dates and charts after midnight.
     meals = list_meal_schedule(
         active_profile_id, date_from=now.date().isoformat(), date_to=now.date().isoformat(),
     )
@@ -2508,7 +2557,11 @@ def render_clinical_dashboard() -> None:
         measurements = get_measurements(customer_id)
         plans = list_plans(customer_id)
         alerts = list_alerts(customer_id, include_resolved=False)
-        schedule = list_meal_schedule(customer_id)
+        schedule = list_meal_schedule(
+            customer_id, date_from=(local_today() - timedelta(days=6)).isoformat(),
+            date_to=local_today().isoformat(),
+        )
+        tasks = task_summary(list_care_tasks(str(current_user["id"]), customer_id))
         completed, total, completion_pct = schedule_completion(schedule)
         bmi = calculate_bmi(patient["weight_kg"], patient["height_cm"])[0] if patient else None
         rows.append({
@@ -2518,18 +2571,19 @@ def render_clinical_dashboard() -> None:
             "Weight kg": patient.get("weight_kg") if patient else None,
             "BMI": bmi,
             "Active alerts": len([item for item in alerts if item["status"] == "Active"]),
+            "Overdue care tasks": tasks["overdue"],
             "Plans": len(plans),
             "Meal adherence %": completion_pct if total else (measurements[-1].get("adherence_pct") if measurements else 0),
             "Last progress": measurements[-1]["measured_on"] if measurements else "No record",
         })
-    caseload = pd.DataFrame(rows)
+    caseload = pd.DataFrame(rows).sort_values(["Active alerts", "Overdue care tasks"], ascending=False)
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Customers", len(caseload))
     m2.metric("Active alerts", int(caseload["Active alerts"].sum()))
     m3.metric("Plans reviewed", sum(len(list_reviews(str(item["id"]))) for item in linked_customers))
     m4.metric("Average adherence", f"{caseload['Meal adherence %'].fillna(0).mean():.0f}%")
     st.dataframe(caseload, width="stretch", hide_index=True)
-    st.caption("Use the Active customer selector in the sidebar, then open a clinical workspace for detailed review.")
+    st.caption("Meal adherence covers the last seven days through today. Future meals do not lower this score. Select an Active customer to review care tasks and clinical workspaces.")
 
 
 def render_clinical_overview() -> None:
@@ -2824,6 +2878,18 @@ def render_clinical_notes_and_prescriptions() -> None:
             st.dataframe(pd.DataFrame(prescriptions)[["category", "title", "instructions", "status", "dietitian_name", "created_at"]], width="stretch", hide_index=True)
 
 
+def render_care_tasks() -> None:
+    care_workspace_ui.render_care_tasks(current_user, active_profile_id, profile, linked_customers)
+
+
+def render_inbox() -> None:
+    care_workspace_ui.render_inbox(current_user, linked_customers)
+
+
+def render_account_security() -> None:
+    care_workspace_ui.render_account_security(current_user, persist_audio_preferences)
+
+
 def render_clinical_messages() -> None:
     context = clinical_customer_context()
     if not context:
@@ -2851,14 +2917,7 @@ def render_clinical_messages() -> None:
                 st.rerun()
             except ValueError as exc:
                 st.error(str(exc))
-        for message in list_clinical_messages(str(current_user["id"]), active_profile_id):
-            st.markdown(
-                f'<div class="np-message"><span>{html.escape(message.get("message_type", "Message"))} · '
-                f'{html.escape(message["sender_name"])} → {html.escape(message["recipient_name"])} · '
-                f'{html.escape(message.get("status", ""))}</span><h4>{html.escape(message["subject"])}</h4>'
-                f'<p>{html.escape(message["body"])}</p><small>{html.escape(message["created_at"])}</small></div>',
-                unsafe_allow_html=True,
-            )
+        care_workspace_ui.render_conversation(str(current_user["id"]), active_profile_id, "clinical")
     with questionnaire_tab:
         with st.form("clinical_questionnaire_form_v41"):
             title = st.text_input("Questionnaire title", "Nutrition intake and adherence review")
@@ -3038,15 +3097,7 @@ def render_care_team() -> None:
                 st.rerun()
             except ValueError as exc:
                 st.error(str(exc))
-    for message in list_clinical_messages(str(current_user["id"]), selected_id):
-        st.markdown(
-            f'<div class="np-message"><span>{html.escape(message.get("message_type", "Message"))} · '
-            f'{html.escape(message["sender_name"])} → {html.escape(message["recipient_name"])} · '
-            f'{html.escape(message.get("status", ""))}</span>'
-            f'<h4>{html.escape(message["subject"])}</h4><p>{html.escape(message["body"])}</p>'
-            f'<small>{html.escape(message["created_at"][:16].replace("T", " "))} UTC</small></div>',
-            unsafe_allow_html=True,
-        )
+    care_workspace_ui.render_conversation(str(current_user["id"]), selected_id, "customer")
 
 
 def render_assistant() -> None:
@@ -3370,9 +3421,9 @@ def render_web_and_api() -> None:
         api_url = os.getenv("NUTRIPULSE_API_URL", "http://127.0.0.1:8000").rstrip("/")
         status_columns = st.columns(4)
         status_columns[0].metric("API version", APP_VERSION)
-        status_columns[1].metric("Endpoints", 18)
+        status_columns[1].metric("Endpoints", 20)
         status_columns[2].metric("Schema", "OpenAPI 3")
-        status_columns[3].metric("Protection", "Optional API key")
+        status_columns[3].metric("Protection", "API key required")
         st.markdown(
             '<div class="np-alert"><span>⌁</span><div><strong>Start the full stack</strong><br>'
             '<small>Windows: double-click START_ALL.bat · macOS/Linux: run the Streamlit and API launch scripts in separate terminals.</small></div></div>',
@@ -3394,6 +3445,8 @@ def render_web_and_api() -> None:
 
         endpoints = pd.DataFrame([
             ["GET", "/health", "Service and model readiness"],
+            ["GET", "/livez", "Process liveness"],
+            ["GET", "/readyz", "Database and API configuration readiness"],
             ["GET", "/api/v1/foods/search", "Search the nutrition dataset"],
             ["POST", "/api/v1/classifier/predict", "Classify a nutrient profile"],
             ["POST", "/api/v1/labs/analyze", "Flag verified laboratory values"],
@@ -3414,10 +3467,10 @@ def render_web_and_api() -> None:
         ], columns=["Method", "Endpoint", "Purpose"])
         st.dataframe(endpoints, width="stretch", hide_index=True)
         st.code(
-            f'curl "{api_url}/api/v1/foods/search?q=apple&limit=5"',
+            f'curl -H "X-API-Key: <your-private-key>" "{api_url}/api/v1/foods/search?q=apple&limit=5"',
             language="bash",
         )
-        st.caption("If NUTRIPULSE_API_KEY is set, add: -H \"X-API-Key: your-secret\". Never commit the real key.")
+        st.caption("Configure NUTRIPULSE_API_KEY on the API host and send X-API-Key with every /api/v1 request. This key is for trusted server integrations; keep it private.")
 
 
 def render_admin() -> None:
@@ -3512,7 +3565,7 @@ def render_admin() -> None:
         ["Clinical safety rules", "Ready for prototype", "Requires jurisdiction-specific expert validation"],
         ["Classical ML", "Ready", "Portable Random Forest with held-out evaluation; no SciPy startup dependency"],
         ["Deep learning vision", vision_status["status"], "Bundled MobileNetV2 with ONNX Runtime and Windows-safe OpenCV DNN fallback"],
-        ["FastAPI service", "Ready", "Versioned endpoints, Swagger/ReDoc, validation, CORS and optional API-key protection"],
+        ["FastAPI service", "Ready", "Versioned endpoints, Swagger/ReDoc, validation, CORS and required API-key protection"],
         ["Trusted web extraction", "Ready", "Allowlisted domains, public-network enforcement, size limits, caching and source attribution"],
         ["Clinical alert center", "Ready", "Persisted severity rules, lab and lifestyle signals, history and acknowledgement workflow"],
         ["External EHR / wearables", "Integration point", "Requires authorized APIs and consent"],
@@ -3530,6 +3583,9 @@ customer_pages = {
     "⌕  Food Library": render_food_library,
     "↗  Progress Analytics": render_progress,
     "✦  Care Team": render_care_team,
+    "✓  Care Tasks": render_care_tasks,
+    "✉  Care Inbox": render_inbox,
+    "⚙  Account & Security": render_account_security,
     "✧  NutriGuide Assistant": render_assistant,
     "◆  Nutrition Classifier": render_quality_classifier,
     "⌘  Evidence Web & API": render_web_and_api,
@@ -3543,6 +3599,9 @@ dietitian_pages = {
     "↗  Progress Analytics": render_clinical_progress,
     "◆  Notes & Prescriptions": render_clinical_notes_and_prescriptions,
     "✉  Questions & Messaging": render_clinical_messages,
+    "✓  Care Tasks": render_care_tasks,
+    "✉  Care Inbox": render_inbox,
+    "⚙  Account & Security": render_account_security,
 }
 admin_pages = {
     **dietitian_pages,
@@ -3572,10 +3631,27 @@ if current_user["role"] == "Customer":
         on_change=persist_audio_preferences, args=(str(current_user["id"]),),
     )
 if st.sidebar.button("Sign out", width="stretch"):
+    record_account_event(str(current_user["id"]), "Signed out")
     if current_user["role"] == "Dietitian":
         clear_user_presence(str(current_user["id"]))
     st.session_state.clear()
     st.rerun()
+@st.fragment(run_every="60s")
+def live_inbox_watch() -> None:
+    validate_current_session()
+    conversations = unread_conversations(str(current_user["id"]))
+    count = sum(int(item["unread_count"]) for item in conversations)
+    latest = max((str(item["latest_at"]) for item in conversations), default="")
+    previous = st.session_state.get("inbox_snapshot")
+    if previous is not None and (count > previous[0] or latest > previous[1]):
+        st.toast("New message in Care Inbox", icon="✉️")
+        if get_user_preferences(str(current_user["id"]))["message_sounds"]:
+            components.html(message_sound_html("receive"), height=0)
+    st.session_state.inbox_snapshot = (count, latest)
+    st.sidebar.caption(f"Care Inbox · {count} unread message(s)")
+
+
+live_inbox_watch()
 active_alert_count = sum(item["status"] == "Active" for item in current_alerts)
 alert_tone = "critical" if any(item["severity"] == "Critical" and item["status"] == "Active" for item in current_alerts) else "normal"
 st.sidebar.markdown(

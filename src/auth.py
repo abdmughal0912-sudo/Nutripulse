@@ -6,7 +6,10 @@ import base64
 import hashlib
 import hmac
 import os
+from pathlib import Path
 from typing import Any
+
+from .account_security import clear_login_attempts, record_account_event, reserve_login_attempt
 
 from .database import (
     create_user, get_user_by_email, get_user_by_username, has_admin,
@@ -20,6 +23,8 @@ ITERATIONS = 310_000
 def hash_password(password: str) -> str:
     if len(password) < 8:
         raise ValueError("Password must contain at least 8 characters.")
+    if len(password) > 256:
+        raise ValueError("Password must contain at most 256 characters.")
     salt = os.urandom(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, ITERATIONS)
     return f"pbkdf2_sha256${ITERATIONS}${base64.b64encode(salt).decode()}${base64.b64encode(digest).decode()}"
@@ -81,11 +86,21 @@ def register_admin_account(username: str, password: str, display_name: str,
 
 def authenticate_with_status(
     username: str, password: str, *, record_success: bool = True,
+    db_path: Path | None = None,
 ) -> tuple[dict[str, Any] | None, str]:
     identifier = str(username or "").strip()
-    user = get_user_by_username(identifier) or get_user_by_email(identifier)
-    if not user or not verify_password(password, str(user["password_hash"])):
+    if not identifier or len(identifier) > 254 or len(password) > 256:
         return None, "Incorrect email/username or password."
+    db_args = {"db_path": db_path} if db_path is not None else {}
+    user = get_user_by_username(identifier, **db_args) or get_user_by_email(identifier, **db_args)
+    identity = f"account:{user['id']}" if user else f"identifier:{identifier.lower()}"
+    if not reserve_login_attempt(identity, **db_args):
+        return None, "Too many sign-in attempts. Wait 15 minutes, or use Forgot password."
+    if not user or not verify_password(password, str(user["password_hash"])):
+        if user:
+            record_account_event(str(user["id"]), "Incorrect password", **db_args)
+        return None, "Incorrect email/username or password."
+    clear_login_attempts(identity, **db_args)
     if "email_verified_at" in user and not str(user.get("email_verified_at") or "").strip():
         return (
             {key: value for key, value in user.items() if key != "password_hash"},
@@ -99,7 +114,8 @@ def authenticate_with_status(
     if not int(user.get("active", 0)):
         return None, "This account is inactive. Contact the administrator."
     if record_success:
-        record_login(str(user["id"]))
+        record_login(str(user["id"]), **db_args)
+        record_account_event(str(user["id"]), "Signed in", **db_args)
     return {key: value for key, value in user.items() if key != "password_hash"}, "Signed in."
 
 
